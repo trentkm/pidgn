@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct CreateHouseholdView: View {
-    @EnvironmentObject var authService: AuthService
+    @Environment(AuthService.self) var authService
     @Environment(\.dismiss) private var dismiss
     @State private var householdName = ""
     @State private var isLoading = false
@@ -81,6 +81,6 @@ struct CreateHouseholdView: View {
 #Preview {
     NavigationStack {
         CreateHouseholdView()
-            .environmentObject(AuthService())
+            .environment(AuthService())
     }
 }

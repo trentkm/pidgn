@@ -13,16 +13,17 @@ import FirebaseCore
 
 @main
 struct PidgnApp: App {
-    @StateObject private var authService = AuthService()
+    @State private var authService: AuthService
 
     init() {
         FirebaseApp.configure()
+        _authService = State(initialValue: AuthService())
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(authService)
+                .environment(authService)
         }
     }
 }

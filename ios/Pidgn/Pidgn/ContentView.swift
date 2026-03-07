@@ -10,7 +10,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject var authService: AuthService
+    @Environment(AuthService.self) var authService
 
     var body: some View {
         Group {
@@ -38,5 +38,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .environmentObject(AuthService())
+        .environment(AuthService())
 }

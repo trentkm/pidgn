@@ -7,7 +7,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @EnvironmentObject var authService: AuthService
+    @Environment(AuthService.self) var authService
     @State private var inviteCode: String?
     @State private var isGeneratingInvite = false
     @State private var errorMessage: String?
@@ -127,5 +127,5 @@ struct HomeView: View {
 
 #Preview {
     HomeView()
-        .environmentObject(AuthService())
+        .environment(AuthService())
 }

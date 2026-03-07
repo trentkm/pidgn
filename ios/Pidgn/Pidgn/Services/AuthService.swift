@@ -5,18 +5,20 @@
 //  NOTE: Requires FirebaseAuth and FirebaseFirestore packages added via SPM in Xcode.
 
 import Foundation
+import Observation
 import FirebaseAuth
 import FirebaseFirestore
 
 @MainActor
-class AuthService: ObservableObject {
-    @Published var user: User?
-    @Published var isAuthenticated = false
-    @Published var isLoading = true
-    @Published var errorMessage: String?
-    @Published var userProfile: UserProfile?
+@Observable
+class AuthService {
+    var user: User?
+    var isAuthenticated = false
+    var isLoading = true
+    var errorMessage: String?
+    var userProfile: UserProfile?
 
-    private var authStateListener: AuthStateDidChangeListenerHandle?
+    nonisolated(unsafe) private var authStateListener: AuthStateDidChangeListenerHandle?
     private let db = Firestore.firestore()
 
     struct UserProfile {
@@ -65,12 +67,10 @@ class AuthService: ObservableObject {
         do {
             let result = try await Auth.auth().createUser(withEmail: email, password: password)
 
-            // Update Firebase Auth display name
             let changeRequest = result.user.createProfileChangeRequest()
             changeRequest.displayName = displayName
             try await changeRequest.commitChanges()
 
-            // Create user document in Firestore
             let userData: [String: Any] = [
                 "uid": result.user.uid,
                 "displayName": displayName,
@@ -142,7 +142,6 @@ class AuthService: ObservableObject {
         }
     }
 
-    /// Refresh the user profile from Firestore (e.g., after joining a household)
     func refreshProfile() async {
         guard let uid = user?.uid else { return }
         await fetchUserProfile(uid: uid)

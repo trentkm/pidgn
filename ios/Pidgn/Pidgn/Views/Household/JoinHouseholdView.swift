@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct JoinHouseholdView: View {
-    @EnvironmentObject var authService: AuthService
+    @Environment(AuthService.self) var authService
     @Environment(\.dismiss) private var dismiss
     @State private var inviteCode = ""
     @State private var isLoading = false
@@ -83,6 +83,6 @@ struct JoinHouseholdView: View {
 #Preview {
     NavigationStack {
         JoinHouseholdView()
-            .environmentObject(AuthService())
+            .environment(AuthService())
     }
 }

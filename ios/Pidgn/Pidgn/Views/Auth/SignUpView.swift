@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct SignUpView: View {
-    @EnvironmentObject var authService: AuthService
+    @Environment(AuthService.self) var authService
     @Environment(\.dismiss) private var dismiss
     @State private var displayName = ""
     @State private var email = ""
@@ -95,6 +95,6 @@ struct SignUpView: View {
 #Preview {
     NavigationStack {
         SignUpView()
-            .environmentObject(AuthService())
+            .environment(AuthService())
     }
 }
