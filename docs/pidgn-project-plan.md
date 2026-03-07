@@ -14,23 +14,23 @@ Pidgn is a family messaging app with a physical NFC fridge magnet. Messages are 
 
 ### Tasks
 
-- [ ] Install Xcode from the Mac App Store
-- [ ] Create a new SwiftUI project in Xcode (target iOS 17+)
-- [ ] Set up Apple Developer account ($99/year) — needed for device testing and NFC
-- [ ] Create Firebase project at console.firebase.google.com
-  - [ ] Enable Firestore (start in test mode, lock down later)
-  - [ ] Enable Firebase Auth (email/password for dev, add phone auth later)
-  - [ ] Enable Firebase Storage
-  - [ ] Enable Cloud Messaging (FCM)
-  - [ ] Download `GoogleService-Info.plist`, add to Xcode project
-- [ ] Initialize Express project in `/server`
-  - [ ] `npm init`, install express, firebase-admin, cors, dotenv
-  - [ ] Set up Firebase Admin SDK with service account key
-  - [ ] Create basic health check endpoint, verify it runs locally
-- [ ] Set up Railway account, connect to GitHub repo, deploy Express server
-- [ ] Register pidgn.app domain (done)
-- [ ] Set up basic static site at pidgn.app with `apple-app-site-association` file
-- [ ] Initialize Git repo with `/ios`, `/server`, `/firebase`, `/web` structure
+- [x] Install Xcode from the Mac App Store
+- [x] Create a new SwiftUI project in Xcode (target iOS 17+)
+- [x] Set up Apple Developer account ($99/year) — needed for device testing and NFC
+- [x] Create Firebase project at console.firebase.google.com
+  - [x] Enable Firestore (start in test mode, lock down later)
+  - [x] Enable Firebase Auth (email/password for dev, add phone auth later)
+  - [ ] Enable Firebase Storage (console bug — deferred to Phase 4)
+  - [x] Enable Cloud Messaging (FCM)
+  - [x] Download `GoogleService-Info.plist`, add to Xcode project
+- [x] Initialize Express project in `/server`
+  - [x] `npm init`, install express, firebase-admin, cors, dotenv
+  - [x] Set up Firebase Admin SDK with service account key
+  - [x] Create basic health check endpoint, verify it runs locally
+- [x] Set up Railway account, connect to GitHub repo, deploy Express server
+- [x] Register pidgn.app domain (done)
+- [x] Set up basic static site at pidgn.app with `apple-app-site-association` file
+- [x] Initialize Git repo with `/ios`, `/server`, `/firebase`, `/web` structure
 
 ### Definition of Done
 Express server is deployed on Railway and returns 200 on health check. Xcode project builds and runs "Hello World" in the simulator. Firebase project is provisioned.
