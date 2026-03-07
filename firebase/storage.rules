@@ -1,10 +1,24 @@
 rules_version = '2';
 
-// WARNING: Test mode — lock down before production (Phase 5)
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // Household media: photos, voice memos
+    // Path: households/{householdId}/media/{allPaths=**}
+    // TODO: Tighten validation in Phase 5 (file size limits, content types)
+    match /households/{householdId}/media/{allPaths=**} {
+      // Household members can read media from their household
+      allow read: if request.auth != null
+        && request.auth.uid in firestore.get(/databases/(default)/documents/households/$(householdId)).data.memberIds;
+
+      // Household members can upload media to their household
+      allow write: if request.auth != null
+        && request.auth.uid in firestore.get(/databases/(default)/documents/households/$(householdId)).data.memberIds;
+    }
+
+    // Deny all other paths
     match /{allPaths=**} {
-      allow read, write: if request.time < timestamp.date(2026, 4, 7);
+      allow read, write: if false;
     }
   }
 }

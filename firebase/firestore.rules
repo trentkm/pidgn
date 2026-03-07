@@ -1,10 +1,72 @@
 rules_version = '2';
 
-// WARNING: Test mode — lock down before production (Phase 5)
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2026, 4, 7);
+
+    // ─── Helper Functions ───────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
     }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isHouseholdMember(householdId) {
+      return isAuthenticated()
+        && request.auth.uid in get(/databases/$(database)/documents/households/$(householdId)).data.memberIds;
+    }
+
+    // ─── users/{userId} ─────────────────────────────────────
+
+    match /users/{userId} {
+      // Users can only read their own document
+      allow read: if isOwner(userId);
+
+      // Users can create their own document (uid must match)
+      allow create: if isOwner(userId);
+
+      // Users can update their own document
+      allow update: if isOwner(userId);
+
+      // No deletes from client
+      allow delete: if false;
+    }
+
+    // ─── households/{householdId} ───────────────────────────
+
+    match /households/{householdId} {
+      // Household members can read the household doc
+      allow read: if isHouseholdMember(householdId);
+
+      // Any authenticated user can create a household
+      // (server handles adding them as the first member via Admin SDK)
+      allow create: if isAuthenticated();
+
+      // Only members can update the household doc
+      allow update: if isHouseholdMember(householdId);
+
+      // No deletes from client
+      allow delete: if false;
+
+      // ─── households/{householdId}/members/{userId} ──────
+
+      match /members/{userId} {
+        // Household members can read member subdocs
+        allow read: if isHouseholdMember(householdId);
+
+        // Writes are handled by Admin SDK (server-side)
+        allow write: if false;
+      }
+
+      // ─── households/{householdId}/mailbox/{messageId} ───
+      // TODO: Add mailbox rules in Phase 2
+
+      // ─── Reserved for future subcollections ─────────────
+    }
+
+    // ─── contacts/{householdId}/connected/{targetHouseholdId} ─
+    // TODO: Add contacts rules in Phase 2/3
   }
 }

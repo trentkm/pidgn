@@ -1,6 +1,6 @@
 {
   "indexes": [
-    {
+{
       "collectionGroup": "mailbox",
       "queryScope": "COLLECTION",
       "fields": [
