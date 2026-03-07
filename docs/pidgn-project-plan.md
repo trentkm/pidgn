@@ -43,16 +43,18 @@ Express server is deployed on Railway and returns 200 on health check. Xcode pro
 
 ### Tasks
 
-- [ ] **Server:** Auth middleware — validate Firebase ID tokens on all routes
-- [ ] **iOS:** Sign up / sign in screen (email + password for MVP)
-- [ ] **iOS:** Firebase Auth SDK integration — get ID token, pass in API headers
-- [ ] **Server:** `POST /households/create` — create household doc, add creator as owner
-- [ ] **iOS:** "Create your household" flow — name your household
-- [ ] **Server:** `POST /households/invite` — generate invite code or link
-- [ ] **iOS:** "Join a household" flow — enter invite code
-- [ ] **Server:** `POST /households/join` — add user to household, update memberIds
-- [ ] **Firestore:** Write security rules for users and households collections
-- [ ] **Firestore:** Deploy `firestore.indexes.json` with required composite indexes
+- [x] **Server:** Auth middleware — validate Firebase ID tokens on all routes
+- [x] **iOS:** Sign up / sign in screen (email + password for MVP)
+- [x] **iOS:** Firebase Auth SDK integration — get ID token, pass in API headers
+- [x] **Server:** `POST /households/create` — create household doc, add creator as owner
+- [x] **iOS:** "Create your household" flow — name your household
+- [x] **Server:** `POST /households/invite` — generate invite code or link
+- [x] **iOS:** "Join a household" flow — enter invite code
+- [x] **Server:** `POST /households/join` — add user to household, update memberIds
+- [x] **Firestore:** Write security rules for users and households collections
+- [x] **Firestore:** Deploy `firestore.indexes.json` with required composite indexes
+
+> **Status:** Complete. End-to-end tested: sign up, create household, generate invite code, join via code.
 
 ### Definition of Done
 Two test users can sign up, one creates a household, the other joins it via invite. Household and user documents are correctly written in Firestore.

@@ -28,7 +28,7 @@ struct CreateHouseholdView: View {
                     .foregroundStyle(.secondary)
             }
 
-            TextField("e.g. The Morells", text: $householdName)
+            TextField("e.g. The Morrells", text: $householdName)
                 .textFieldStyle(.roundedBorder)
                 .autocorrectionDisabled()
 
