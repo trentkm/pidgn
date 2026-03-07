@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "mailbox",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isOpened", "order": "ASCENDING" },
+        { "fieldPath": "sentAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mailbox",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fromHouseholdId", "order": "ASCENDING" },
+        { "fieldPath": "sentAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -1,0 +1,10 @@
+rules_version = '2';
+
+// WARNING: Test mode — lock down before production (Phase 5)
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if request.time < timestamp.date(2026, 4, 7);
+    }
+  }
+}

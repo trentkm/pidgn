@@ -1,0 +1,10 @@
+rules_version = '2';
+
+// WARNING: Test mode — lock down before production (Phase 5)
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2026, 4, 7);
+    }
+  }
+}
