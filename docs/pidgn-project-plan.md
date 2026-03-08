@@ -118,20 +118,22 @@ User A sends a message. User B gets a teaser notification with no content previe
 
 ### Tasks
 
-- [ ] **iOS:** Photo picker integration (PhotosUI framework)
-- [ ] **iOS:** Client-side image compression (resize to max 1200px wide, JPEG 0.7 quality)
-- [ ] **iOS:** Upload compressed image to Firebase Storage
-- [ ] **iOS:** Compose screen — attach photo, add optional caption
-- [ ] **Server:** Update `POST /mail/send` to handle photo message type
-- [ ] **iOS:** Voice memo recording (AVFoundation)
-  - [ ] Max 60 second recording
-  - [ ] Compress to AAC/M4A
-  - [ ] Upload to Firebase Storage
-- [ ] **iOS:** Compose screen — record and attach voice memo
-- [ ] **Server:** Update `POST /mail/send` to handle voice message type
-- [ ] **iOS:** Message detail — display photo with caption
-- [ ] **iOS:** Message detail — audio playback for voice memos
-- [ ] **Firebase:** Storage security rules — only household members can read their media
+- [x] **iOS:** Photo picker integration (PhotosUI framework)
+- [x] **iOS:** Client-side image compression (resize to max 1200px wide, JPEG 0.7 quality)
+- [x] **iOS:** Upload compressed image to Firebase Storage
+- [x] **iOS:** Compose screen — attach photo, add optional caption
+- [x] **Server:** Update `POST /mail/send` to handle photo message type
+- [x] **iOS:** Voice memo recording (AVFoundation)
+  - [x] Max 60 second recording
+  - [x] Compress to AAC/M4A
+  - [x] Upload to Firebase Storage
+- [x] **iOS:** Compose screen — record and attach voice memo
+- [x] **Server:** Update `POST /mail/send` to handle voice message type
+- [x] **iOS:** Message detail — display photo with caption
+- [x] **iOS:** Message detail — audio playback for voice memos
+- [x] **Firebase:** Storage security rules — only household members can read their media
+
+> **Status:** Complete. All three message types (text, photo+caption, voice memo) supported end-to-end. Firebase Storage rules were already in place from Phase 0.
 
 ### Definition of Done
 Users can send and receive all three MVP message types: text, photo + caption, and voice memo. Media uploads are compressed client-side and stored securely.

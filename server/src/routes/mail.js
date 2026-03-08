@@ -4,22 +4,37 @@ const admin = require('firebase-admin');
 const router = express.Router();
 
 // POST /mail/send
-// Send a text message from the caller's household to a target household
+// Send a message (text, photo, or voice) to a target household
 router.post('/send', async (req, res) => {
   try {
-    const { targetHouseholdId, content } = req.body;
+    const { targetHouseholdId, content, type: messageType, mediaUrl } = req.body;
     const uid = req.user.uid;
 
     if (!targetHouseholdId || typeof targetHouseholdId !== 'string') {
       return res.status(400).json({ error: 'targetHouseholdId is required' });
     }
 
-    if (!content || typeof content !== 'string' || content.trim().length === 0) {
-      return res.status(400).json({ error: 'Message content is required' });
+    const validTypes = ['text', 'photo', 'voice'];
+    const type = validTypes.includes(messageType) ? messageType : 'text';
+
+    // Text messages require content
+    if (type === 'text') {
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ error: 'Message content is required' });
+      }
+      if (content.length > 500) {
+        return res.status(400).json({ error: 'Message must be 500 characters or fewer' });
+      }
     }
 
-    if (content.length > 500) {
-      return res.status(400).json({ error: 'Message must be 500 characters or fewer' });
+    // Photo captions are optional, max 200 chars
+    if (type === 'photo' && content && content.length > 200) {
+      return res.status(400).json({ error: 'Caption must be 200 characters or fewer' });
+    }
+
+    // Photo and voice require mediaUrl
+    if ((type === 'photo' || type === 'voice') && (!mediaUrl || typeof mediaUrl !== 'string')) {
+      return res.status(400).json({ error: 'mediaUrl is required for photo and voice messages' });
     }
 
     const db = admin.firestore();
@@ -66,9 +81,9 @@ router.post('/send', async (req, res) => {
       fromUserId: uid,
       fromDisplayName: userData.displayName || 'Unknown',
       fromHouseholdId,
-      type: 'text',
-      content: content.trim(),
-      mediaUrl: null,
+      type,
+      content: content ? content.trim() : '',
+      mediaUrl: mediaUrl || null,
       sentAt: admin.firestore.FieldValue.serverTimestamp(),
       isOpened: false,
       openedAt: null,

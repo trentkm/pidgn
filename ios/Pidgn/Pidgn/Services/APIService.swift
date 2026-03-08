@@ -167,11 +167,24 @@ class APIService {
         let messageId: String
     }
 
-    func sendMail(targetHouseholdId: String, content: String) async throws -> SendMailResponse {
+    func sendMail(
+        targetHouseholdId: String,
+        content: String,
+        type: String = "text",
+        mediaUrl: String? = nil
+    ) async throws -> SendMailResponse {
+        var body: [String: Any] = [
+            "targetHouseholdId": targetHouseholdId,
+            "content": content,
+            "type": type,
+        ]
+        if let mediaUrl {
+            body["mediaUrl"] = mediaUrl
+        }
         let data = try await authenticatedRequest(
             path: "/mail/send",
             method: "POST",
-            body: ["targetHouseholdId": targetHouseholdId, "content": content]
+            body: body
         )
         return try JSONDecoder().decode(SendMailResponse.self, from: data)
     }
