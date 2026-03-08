@@ -52,7 +52,8 @@ struct MessageDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             if let urlString = message.mediaUrl, let url = URL(string: urlString) {
                 AsyncImage(url: url) { image in
-                    image.resizable().scaledToFit().cornerRadius(12)
+                    image.resizable().scaledToFit()
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 } placeholder: {
                     ProgressView().frame(maxWidth: .infinity, minHeight: 200)
                 }
@@ -110,9 +111,11 @@ struct MessageDetailView: View {
                 .font(.caption)
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .padding(14)
+        .background(
+            Color(.secondarySystemBackground),
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        )
     }
 
     private func togglePlayback() {

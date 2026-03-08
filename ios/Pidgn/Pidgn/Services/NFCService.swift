@@ -2,7 +2,7 @@
 //  NFCService.swift
 //  Pidgn
 //
-//  Handles NFC tag writing for magnet setup.
+//  Handles NFC tag writing (magnet setup) and reading (open letters).
 //  NOTE: Requires CoreNFC. NFC only works on physical devices, not simulator.
 //  You must add "Near Field Communication Tag Reading" capability in Xcode
 //  and add NFCReaderUsageDescription to Info.plist.
@@ -15,12 +15,18 @@ class NFCService: NSObject, NFCNDEFReaderSessionDelegate {
 
     private var session: NFCNDEFReaderSession?
     private var onComplete: ((Result<Void, Error>) -> Void)?
+    private var mode: SessionMode = .write
+
+    enum SessionMode {
+        case write
+        case scan
+    }
 
     private override init() {
         super.init()
     }
 
-    // MARK: - Write Tag
+    // MARK: - Write Tag (magnet setup)
 
     func writeTag(completion: @escaping (Result<Void, Error>) -> Void) {
         guard NFCNDEFReaderSession.readingAvailable else {
@@ -28,10 +34,55 @@ class NFCService: NSObject, NFCNDEFReaderSessionDelegate {
             return
         }
 
+        mode = .write
         onComplete = completion
         session = NFCNDEFReaderSession(delegate: self, queue: nil, invalidateAfterFirstRead: false)
         session?.alertMessage = "Hold your iPhone near the magnet to set it up."
         session?.begin()
+    }
+
+    // MARK: - Scan Tag (open a letter)
+
+    func scanTag(completion: @escaping (Result<Void, Error>) -> Void) {
+        guard NFCNDEFReaderSession.readingAvailable else {
+            completion(.failure(NFCError.notAvailable))
+            return
+        }
+
+        // If a session is still cleaning up, fail fast so the continuation resolves
+        guard session == nil else {
+            completion(.failure(NFCError.sessionBusy))
+            return
+        }
+
+        mode = .scan
+        onComplete = completion
+        session = NFCNDEFReaderSession(delegate: self, queue: nil, invalidateAfterFirstRead: true)
+        session?.alertMessage = "Hold your iPhone near the Pidgn magnet to unseal this letter."
+        session?.begin()
+    }
+
+    /// Async wrapper for scanTag
+    func scanTag() async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            scanTag { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    /// Call onComplete exactly once, then nil it out to prevent double-firing
+    private func complete(with result: Result<Void, Error>) {
+        let handler = onComplete
+        onComplete = nil
+        handler?(result)
     }
 
     // MARK: - NFCNDEFReaderSessionDelegate
@@ -41,41 +92,62 @@ class NFCService: NSObject, NFCNDEFReaderSessionDelegate {
     }
 
     func readerSession(_ session: NFCNDEFReaderSession, didDetectNDEFs messages: [NFCNDEFMessage]) {
-        // Not used — we're writing, not reading
+        // Used in scan mode (invalidateAfterFirstRead: true)
+        guard mode == .scan else { return }
+
+        // Validate that one of the records contains pidgn.app
+        let isPidgnTag = messages.contains { message in
+            message.records.contains { record in
+                if let url = record.wellKnownTypeURIPayload() {
+                    return url.host == "pidgn.app" || url.host == "www.pidgn.app"
+                }
+                return false
+            }
+        }
+
+        if isPidgnTag {
+            session.alertMessage = "Letter unsealed!"
+            complete(with: .success(()))
+        } else {
+            session.invalidate(errorMessage: "This isn't a Pidgn magnet.")
+            complete(with: .failure(NFCError.invalidTag))
+        }
     }
 
     func readerSession(_ session: NFCNDEFReaderSession, didDetect tags: [any NFCNDEFTag]) {
+        // Used in write mode (invalidateAfterFirstRead: false)
+        guard mode == .write else { return }
+
         guard let tag = tags.first else {
             session.invalidate(errorMessage: "No tag found.")
-            onComplete?(.failure(NFCError.noTag))
+            complete(with: .failure(NFCError.noTag))
             return
         }
 
         session.connect(to: tag) { error in
             if let error {
                 session.invalidate(errorMessage: "Connection failed.")
-                self.onComplete?(.failure(error))
+                self.complete(with: .failure(error))
                 return
             }
 
             tag.queryNDEFStatus { status, _, error in
                 if let error {
                     session.invalidate(errorMessage: "Could not read tag status.")
-                    self.onComplete?(.failure(error))
+                    self.complete(with: .failure(error))
                     return
                 }
 
                 guard status == .readWrite else {
                     session.invalidate(errorMessage: "Tag is not writable.")
-                    self.onComplete?(.failure(NFCError.notWritable))
+                    self.complete(with: .failure(NFCError.notWritable))
                     return
                 }
 
-                // Create NDEF URL record for pidgn.app/open
                 guard let url = URL(string: "https://pidgn.app/open"),
                       let payload = NFCNDEFPayload.wellKnownTypeURIPayload(url: url) else {
                     session.invalidate(errorMessage: "Could not create URL payload.")
-                    self.onComplete?(.failure(NFCError.payloadError))
+                    self.complete(with: .failure(NFCError.payloadError))
                     return
                 }
 
@@ -84,11 +156,11 @@ class NFCService: NSObject, NFCNDEFReaderSessionDelegate {
                 tag.writeNDEF(message) { error in
                     if let error {
                         session.invalidate(errorMessage: "Write failed: \(error.localizedDescription)")
-                        self.onComplete?(.failure(error))
+                        self.complete(with: .failure(error))
                     } else {
                         session.alertMessage = "Magnet set up successfully!"
                         session.invalidate()
-                        self.onComplete?(.success(()))
+                        self.complete(with: .success(()))
                     }
                 }
             }
@@ -96,23 +168,31 @@ class NFCService: NSObject, NFCNDEFReaderSessionDelegate {
     }
 
     func readerSession(_ session: NFCNDEFReaderSession, didInvalidateWithError error: Error) {
-        // Only report if it's not a user cancellation
+        // Always call complete() — the helper no-ops if already fired from didDetectNDEFs.
+        // This prevents leaked continuations when didDetectNDEFs doesn't fire first.
         let nfcError = error as? NFCReaderError
-        if nfcError?.code != .readerSessionInvalidationErrorUserCanceled {
-            onComplete?(.failure(error))
+        if nfcError?.code == .readerSessionInvalidationErrorFirstNDEFTagRead {
+            // Successful read — didDetectNDEFs likely already completed with .success.
+            // Call .success again as a safety net (no-ops if already fired).
+            complete(with: .success(()))
+        } else {
+            // User cancelled or unexpected error
+            complete(with: .failure(error))
         }
+
         self.session = nil
-        onComplete = nil
     }
 }
 
 // MARK: - NFC Errors
 
-enum NFCError: LocalizedError {
+enum NFCError: LocalizedError, Equatable {
     case notAvailable
     case noTag
     case notWritable
     case payloadError
+    case invalidTag
+    case sessionBusy
 
     var errorDescription: String? {
         switch self {
@@ -124,6 +204,10 @@ enum NFCError: LocalizedError {
             return "This tag is read-only and cannot be written to."
         case .payloadError:
             return "Failed to create the NFC payload."
+        case .invalidTag:
+            return "This isn't a Pidgn magnet."
+        case .sessionBusy:
+            return "NFC is busy. Try again in a moment."
         }
     }
 }
