@@ -14,6 +14,7 @@ import FirebaseCore
 @main
 struct PidgnApp: App {
     @State private var authService: AuthService
+    @State private var shouldOpenUnread = false
 
     init() {
         FirebaseApp.configure()
@@ -23,8 +24,22 @@ struct PidgnApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(shouldOpenUnread: $shouldOpenUnread)
                 .environment(authService)
+                .onOpenURL { url in
+                    handleUniversalLink(url)
+                }
         }
+    }
+
+    private func handleUniversalLink(_ url: URL) {
+        // Universal Link: https://pidgn.app/open
+        guard url.host == "pidgn.app" || url.host == "www.pidgn.app",
+              url.path == "/open" else {
+            return
+        }
+
+        // Trigger mailbox to open all unread messages
+        shouldOpenUnread = true
     }
 }

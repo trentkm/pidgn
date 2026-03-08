@@ -8,10 +8,11 @@ import SwiftUI
 
 struct MainTabView: View {
     @Environment(AuthService.self) var authService
+    @Binding var shouldOpenUnread: Bool
 
     var body: some View {
         TabView {
-            MailboxView()
+            MailboxView(shouldOpenUnread: shouldOpenUnread)
                 .tabItem {
                     Label("Mailbox", systemImage: "envelope.fill")
                 }
@@ -30,6 +31,6 @@ struct MainTabView: View {
 }
 
 #Preview {
-    MainTabView()
+    MainTabView(shouldOpenUnread: .constant(false))
         .environment(AuthService())
 }

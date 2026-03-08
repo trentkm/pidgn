@@ -13,6 +13,8 @@ struct SettingsView: View {
     @State private var isGeneratingInvite = false
     @State private var errorMessage: String?
     @State private var copiedHouseholdId = false
+    @State private var isSettingUpMagnet = false
+    @State private var magnetSetupResult: String?
 
     private var householdId: String? {
         authService.userProfile?.householdId
@@ -100,6 +102,30 @@ struct SettingsView: View {
                     }
                 }
 
+                // Magnet setup
+                Section("Fridge Magnet") {
+                    Button {
+                        setupMagnet()
+                    } label: {
+                        if isSettingUpMagnet {
+                            ProgressView()
+                        } else {
+                            Label("Set Up Your Magnet", systemImage: "wave.3.right")
+                        }
+                    }
+                    .disabled(isSettingUpMagnet)
+
+                    if let result = magnetSetupResult {
+                        Text(result)
+                            .font(.caption)
+                            .foregroundStyle(result.contains("Success") ? .green : .red)
+                    }
+
+                    Text("Hold your phone near a blank NFC magnet to program it. Once set up, tapping the magnet opens your mailbox.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 if let error = errorMessage {
                     Section {
                         Text(error)
@@ -116,6 +142,29 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+        }
+    }
+
+    private func setupMagnet() {
+        isSettingUpMagnet = true
+        magnetSetupResult = nil
+
+        NFCService.shared.writeTag { result in
+            DispatchQueue.main.async {
+                isSettingUpMagnet = false
+                switch result {
+                case .success:
+                    magnetSetupResult = "Success! Your magnet is ready."
+                    // Update household nfcConfigured in background
+                    if let householdId {
+                        Task {
+                            try? await APIService.shared.updateNfcConfigured(householdId: householdId)
+                        }
+                    }
+                case .failure(let error):
+                    magnetSetupResult = error.localizedDescription
+                }
+            }
         }
     }
 

@@ -92,18 +92,20 @@ User A sends a text message to User B's household. User B receives a push notifi
 
 ### Tasks
 
-- [ ] **iOS:** CoreNFC write session — "Set up your magnet" flow in settings
-  - [ ] Write `https://pidgn.app/open` as NDEF URL to NTAG213 tag
+- [x] **iOS:** CoreNFC write session — "Set up your magnet" flow in settings
+  - [x] Write `https://pidgn.app/open` as NDEF URL to NTAG213 tag
   - [ ] Optional: lock tag after write
-  - [ ] Update household doc: `nfcConfigured: true`
-- [ ] **Web:** `apple-app-site-association` file properly configured for Universal Links
-- [ ] **iOS:** Universal Link handler — intercept `pidgn.app/open`, route to mailbox
-- [ ] **iOS:** Lock message content in mailbox UI — show sender name + "Tap magnet to read"
-- [ ] **iOS:** On NFC tap / Universal Link open, call `POST /mail/open`
-- [ ] **Server:** `POST /mail/open` — mark message opened, send read receipt to sender
-- [ ] **iOS:** Mail opening animation — envelope opens, content reveals
-- [ ] **iOS:** Push notification for sender: "Delivered to fridge"
-- [ ] **Web:** Fallback page at pidgn.app/open — shown if app not installed, links to App Store
+  - [x] Update household doc: `nfcConfigured: true`
+- [x] **Web:** `apple-app-site-association` file properly configured for Universal Links
+- [x] **iOS:** Universal Link handler — intercept `pidgn.app/open`, route to mailbox
+- [x] **iOS:** Lock message content in mailbox UI — show sender name + "Tap magnet to read"
+- [x] **iOS:** On NFC tap / Universal Link open, call `POST /mail/open`
+- [x] **Server:** `POST /mail/open` — mark message opened, send read receipt to sender
+- [x] **iOS:** Mail opening animation — envelope opens, content reveals
+- [x] **iOS:** Push notification for sender: "Delivered to fridge"
+- [x] **Web:** Fallback page at pidgn.app/open — shown if app not installed, links to App Store
+
+> **Status:** Complete. NFC write, Universal Links, locked mailbox, opening animation, read receipts all implemented. Tag locking deferred (optional).
 
 ### Definition of Done
 User A sends a message. User B gets a teaser notification with no content preview. User B walks to fridge, taps phone to magnet. App opens, message unlocks with animation. User A gets "delivered to fridge" notification.

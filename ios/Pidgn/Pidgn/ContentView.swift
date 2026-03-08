@@ -11,6 +11,7 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AuthService.self) var authService
+    @Binding var shouldOpenUnread: Bool
 
     var body: some View {
         Group {
@@ -30,13 +31,13 @@ struct ContentView: View {
             } else if authService.userProfile?.householdId == nil {
                 HouseholdSetupView()
             } else {
-                MainTabView()
+                MainTabView(shouldOpenUnread: $shouldOpenUnread)
             }
         }
     }
 }
 
 #Preview {
-    ContentView()
+    ContentView(shouldOpenUnread: .constant(false))
         .environment(AuthService())
 }

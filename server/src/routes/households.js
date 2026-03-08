@@ -161,4 +161,35 @@ router.post('/join', async (req, res) => {
   }
 });
 
+// POST /households/nfc-configured
+router.post('/nfc-configured', async (req, res) => {
+  try {
+    const { householdId } = req.body;
+    const uid = req.user.uid;
+
+    if (!householdId || typeof householdId !== 'string') {
+      return res.status(400).json({ error: 'householdId is required' });
+    }
+
+    const db = admin.firestore();
+    const householdRef = db.collection('households').doc(householdId);
+    const householdDoc = await householdRef.get();
+
+    if (!householdDoc.exists) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+
+    if (!householdDoc.data().memberIds.includes(uid)) {
+      return res.status(403).json({ error: 'You are not a member of this household' });
+    }
+
+    await householdRef.update({ nfcConfigured: true });
+
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('Error updating NFC config:', err);
+    return res.status(500).json({ error: 'Failed to update NFC configuration' });
+  }
+});
+
 module.exports = router;

@@ -2,7 +2,7 @@
 //  MailboxView.swift
 //  Pidgn
 //
-//  Displays received messages sorted by date. Pull to refresh.
+//  Displays received messages. Unopened messages are locked — tap magnet to read.
 
 import SwiftUI
 
@@ -12,6 +12,12 @@ struct MailboxView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var hasMore = false
+    @State private var openingMessage: APIService.MailMessage?
+    @State private var revealedMessage: APIService.MailMessage?
+    @State private var showReveal = false
+
+    // Set by Universal Link handler to trigger opening all unread
+    @State var shouldOpenUnread: Bool = false
 
     private var householdId: String? {
         authService.userProfile?.householdId
@@ -31,8 +37,12 @@ struct MailboxView: View {
                 } else {
                     List {
                         ForEach(messages) { message in
-                            NavigationLink(destination: MessageDetailView(message: message)) {
-                                MessageRow(message: message)
+                            if message.isOpened {
+                                NavigationLink(destination: MessageDetailView(message: message)) {
+                                    MessageRow(message: message)
+                                }
+                            } else {
+                                LockedMessageRow(message: message)
                             }
                         }
 
@@ -60,6 +70,20 @@ struct MailboxView: View {
             }
             .task {
                 await fetchMailbox()
+            }
+            .onChange(of: shouldOpenUnread) { _, shouldOpen in
+                if shouldOpen {
+                    shouldOpenUnread = false
+                    Task { await openAllUnread() }
+                }
+            }
+            .sheet(isPresented: $showReveal) {
+                if let msg = revealedMessage {
+                    MessageRevealView(message: msg) {
+                        showReveal = false
+                        revealedMessage = nil
+                    }
+                }
             }
             .overlay {
                 if let error = errorMessage {
@@ -107,19 +131,48 @@ struct MailboxView: View {
             errorMessage = error.localizedDescription
         }
     }
+
+    func openAllUnread() async {
+        guard let householdId else { return }
+
+        let unreadMessages = messages.filter { !$0.isOpened }
+        guard let firstUnread = unreadMessages.first else { return }
+
+        // Open the first unread message and show the reveal animation
+        do {
+            let response = try await APIService.shared.openMail(
+                messageId: firstUnread.id,
+                householdId: householdId
+            )
+            revealedMessage = response.message
+            showReveal = true
+
+            // Mark remaining unread as opened in background
+            for msg in unreadMessages.dropFirst() {
+                _ = try? await APIService.shared.openMail(
+                    messageId: msg.id,
+                    householdId: householdId
+                )
+            }
+
+            // Refresh mailbox
+            await fetchMailbox()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
 }
 
-// MARK: - Message Row
+// MARK: - Message Row (opened)
 
 struct MessageRow: View {
     let message: APIService.MailMessage
 
     var body: some View {
         HStack(spacing: 12) {
-            // Unread indicator
-            Circle()
-                .fill(message.isOpened ? Color.clear : Color.blue)
-                .frame(width: 10, height: 10)
+            Image(systemName: "envelope.open.fill")
+                .foregroundStyle(.secondary)
+                .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(message.fromDisplayName)
@@ -146,7 +199,6 @@ struct MessageRow: View {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         guard let date = formatter.date(from: isoString) else {
-            // Try without fractional seconds
             formatter.formatOptions = [.withInternetDateTime]
             guard let date = formatter.date(from: isoString) else { return "" }
             return relativeFormat(date)
@@ -158,6 +210,56 @@ struct MessageRow: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+// MARK: - Locked Message Row (unopened)
+
+struct LockedMessageRow: View {
+    let message: APIService.MailMessage
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "envelope.fill")
+                .foregroundStyle(.blue)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(message.fromDisplayName)
+                    .font(.headline)
+
+                Text("Tap magnet to read")
+                    .font(.subheadline)
+                    .foregroundStyle(.blue)
+                    .italic()
+            }
+
+            Spacer()
+
+            Image(systemName: "lock.fill")
+                .foregroundStyle(.blue)
+                .font(.caption)
+
+            if let sentAt = message.sentAt {
+                Text(formattedDate(sentAt))
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func formattedDate(_ isoString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date = formatter.date(from: isoString) else {
+            formatter.formatOptions = [.withInternetDateTime]
+            guard let date = formatter.date(from: isoString) else { return "" }
+            return RelativeDateTimeFormatter().localizedString(for: date, relativeTo: Date())
+        }
+        let rel = RelativeDateTimeFormatter()
+        rel.unitsStyle = .abbreviated
+        return rel.localizedString(for: date, relativeTo: Date())
     }
 }
 

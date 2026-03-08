@@ -117,6 +117,113 @@ router.post('/send', async (req, res) => {
   }
 });
 
+// POST /mail/open
+// Mark a message as opened (triggered by NFC tap / Universal Link)
+router.post('/open', async (req, res) => {
+  try {
+    const { messageId, householdId } = req.body;
+    const uid = req.user.uid;
+
+    if (!messageId || typeof messageId !== 'string') {
+      return res.status(400).json({ error: 'messageId is required' });
+    }
+
+    if (!householdId || typeof householdId !== 'string') {
+      return res.status(400).json({ error: 'householdId is required' });
+    }
+
+    const db = admin.firestore();
+
+    // Verify caller is a member of the household
+    const householdDoc = await db.collection('households').doc(householdId).get();
+    if (!householdDoc.exists) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+
+    if (!householdDoc.data().memberIds.includes(uid)) {
+      return res.status(403).json({ error: 'You are not a member of this household' });
+    }
+
+    // Get the message
+    const messageRef = db
+      .collection('households').doc(householdId)
+      .collection('mailbox').doc(messageId);
+    const messageDoc = await messageRef.get();
+
+    if (!messageDoc.exists) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    const messageData = messageDoc.data();
+
+    if (messageData.isOpened) {
+      // Already opened — return the message content anyway
+      return res.status(200).json({
+        message: {
+          id: messageDoc.id,
+          ...messageData,
+          sentAt: messageData.sentAt?.toDate?.()?.toISOString() || null,
+          openedAt: messageData.openedAt?.toDate?.()?.toISOString() || null,
+        },
+        alreadyOpened: true,
+      });
+    }
+
+    // Mark as opened
+    const now = admin.firestore.FieldValue.serverTimestamp();
+    await messageRef.update({
+      isOpened: true,
+      openedAt: now,
+      openedByUserId: uid,
+    });
+
+    // Send "Delivered to fridge" read receipt to sender
+    try {
+      const senderDoc = await db.collection('users').doc(messageData.fromUserId).get();
+      if (senderDoc.exists) {
+        const fcmTokens = senderDoc.data().fcmTokens || {};
+        const tokens = Object.values(fcmTokens).map(t => t.token);
+
+        if (tokens.length > 0) {
+          // Get opener's display name
+          const openerDoc = await db.collection('users').doc(uid).get();
+          const openerName = openerDoc.exists ? openerDoc.data().displayName : 'Someone';
+
+          await admin.messaging().sendEachForMulticast({
+            tokens,
+            notification: {
+              title: 'Delivered to fridge!',
+              body: `${openerName} opened your message`,
+            },
+            data: {
+              type: 'read_receipt',
+              messageId,
+              openedByUserId: uid,
+            },
+          });
+        }
+      }
+    } catch (fcmError) {
+      console.error('FCM read receipt error (non-fatal):', fcmError.message);
+    }
+
+    return res.status(200).json({
+      message: {
+        id: messageDoc.id,
+        ...messageData,
+        isOpened: true,
+        openedAt: new Date().toISOString(),
+        openedByUserId: uid,
+        sentAt: messageData.sentAt?.toDate?.()?.toISOString() || null,
+      },
+      alreadyOpened: false,
+    });
+  } catch (err) {
+    console.error('Error opening mail:', err);
+    return res.status(500).json({ error: 'Failed to open message' });
+  }
+});
+
 // GET /mail/mailbox/:householdId
 // Fetch paginated mailbox for a household
 router.get('/mailbox/:householdId', async (req, res) => {

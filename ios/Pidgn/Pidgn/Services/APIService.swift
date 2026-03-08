@@ -210,6 +210,28 @@ class APIService {
         return try JSONDecoder().decode(MailboxResponse.self, from: data)
     }
 
+    func updateNfcConfigured(householdId: String) async throws {
+        _ = try await authenticatedRequest(
+            path: "/households/nfc-configured",
+            method: "POST",
+            body: ["householdId": householdId]
+        )
+    }
+
+    struct OpenMailResponse: Decodable {
+        let message: MailMessage
+        let alreadyOpened: Bool
+    }
+
+    func openMail(messageId: String, householdId: String) async throws -> OpenMailResponse {
+        let data = try await authenticatedRequest(
+            path: "/mail/open",
+            method: "POST",
+            body: ["messageId": messageId, "householdId": householdId]
+        )
+        return try JSONDecoder().decode(OpenMailResponse.self, from: data)
+    }
+
     // MARK: - FCM Endpoints
 
     func registerFCMToken(token: String, deviceId: String) async throws {
