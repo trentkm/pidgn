@@ -183,12 +183,14 @@ class APIService {
         targetHouseholdId: String,
         content: String,
         type: String = "text",
-        mediaUrl: String? = nil
+        mediaUrl: String? = nil,
+        stationery: String = "parchment"
     ) async throws -> SendMailResponse {
         var body: [String: Any] = [
             "targetHouseholdId": targetHouseholdId,
             "content": content,
             "type": type,
+            "stationery": stationery,
         ]
         if let mediaUrl {
             body["mediaUrl"] = mediaUrl
@@ -214,6 +216,7 @@ class APIService {
         let type: String
         let content: String
         let mediaUrl: String?
+        let stationery: String?
         let sentAt: String?
         let isOpened: Bool
         let openedAt: String?

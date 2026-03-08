@@ -7,7 +7,7 @@ const router = express.Router();
 // Send a message (text, photo, or voice) to a target household
 router.post('/send', async (req, res) => {
   try {
-    const { targetHouseholdId, content, type: messageType, mediaUrl } = req.body;
+    const { targetHouseholdId, content, type: messageType, mediaUrl, stationery } = req.body;
     const uid = req.user.uid;
 
     if (!targetHouseholdId || typeof targetHouseholdId !== 'string') {
@@ -84,6 +84,7 @@ router.post('/send', async (req, res) => {
       type,
       content: content ? content.trim() : '',
       mediaUrl: mediaUrl || null,
+      stationery: ['parchment', 'midnight', 'heron', 'rosewater'].includes(stationery) ? stationery : 'parchment',
       sentAt: admin.firestore.FieldValue.serverTimestamp(),
       isOpened: false,
       openedAt: null,

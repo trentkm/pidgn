@@ -934,7 +934,8 @@ struct ComposeView: View {
                 targetHouseholdId: contact.id,
                 content: messageText.trimmingCharacters(in: .whitespacesAndNewlines),
                 type: letterType.rawValue,
-                mediaUrl: mediaUrl
+                mediaUrl: mediaUrl,
+                stationery: stationery.rawValue
             )
             return nil
         } catch {

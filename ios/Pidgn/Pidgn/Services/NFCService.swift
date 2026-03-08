@@ -88,35 +88,17 @@ class NFCService: NSObject, NFCNDEFReaderSessionDelegate {
     // MARK: - NFCNDEFReaderSessionDelegate
 
     func readerSessionDidBecomeActive(_ session: NFCNDEFReaderSession) {
-        // Session is active, waiting for tag
+        print("[NFC] Session active, mode: \(mode)")
     }
 
     func readerSession(_ session: NFCNDEFReaderSession, didDetectNDEFs messages: [NFCNDEFMessage]) {
-        // Used in scan mode (invalidateAfterFirstRead: true)
-        guard mode == .scan else { return }
-
-        // Validate that one of the records contains pidgn.app
-        let isPidgnTag = messages.contains { message in
-            message.records.contains { record in
-                if let url = record.wellKnownTypeURIPayload() {
-                    return url.host == "pidgn.app" || url.host == "www.pidgn.app"
-                }
-                return false
-            }
-        }
-
-        if isPidgnTag {
-            session.alertMessage = "Letter unsealed!"
-            complete(with: .success(()))
-        } else {
-            session.invalidate(errorMessage: "This isn't a Pidgn magnet.")
-            complete(with: .failure(NFCError.invalidTag))
-        }
+        // iOS routes to didDetect(tags:) when both delegates are implemented.
+        // This is only called if didDetect(tags:) is not present — kept as a fallback.
+        print("[NFC] didDetectNDEFs fallback called — \(messages.count) message(s)")
     }
 
     func readerSession(_ session: NFCNDEFReaderSession, didDetect tags: [any NFCNDEFTag]) {
-        // Used in write mode (invalidateAfterFirstRead: false)
-        guard mode == .write else { return }
+        print("[NFC] didDetect tags called — \(tags.count) tag(s), mode: \(mode)")
 
         guard let tag = tags.first else {
             session.invalidate(errorMessage: "No tag found.")
@@ -131,46 +113,97 @@ class NFCService: NSObject, NFCNDEFReaderSessionDelegate {
                 return
             }
 
-            tag.queryNDEFStatus { status, _, error in
+            switch self.mode {
+            case .scan:
+                self.handleScanTag(tag, session: session)
+            case .write:
+                self.handleWriteTag(tag, session: session)
+            }
+        }
+    }
+
+    private func handleScanTag(_ tag: any NFCNDEFTag, session: NFCNDEFReaderSession) {
+        tag.readNDEF { message, error in
+            if let error {
+                print("[NFC] Read error: \(error.localizedDescription)")
+                session.invalidate(errorMessage: "Couldn't read tag.")
+                self.complete(with: .failure(error))
+                return
+            }
+
+            guard let message else {
+                print("[NFC] No NDEF message on tag")
+                session.invalidate(errorMessage: "This tag is empty.")
+                self.complete(with: .failure(NFCError.invalidTag))
+                return
+            }
+
+            // Log records for debugging
+            for (i, record) in message.records.enumerated() {
+                let url = record.wellKnownTypeURIPayload()
+                print("[NFC] Record[\(i)]: url=\(url?.absoluteString ?? "nil") host=\(url?.host ?? "nil")")
+            }
+
+            let isPidgnTag = message.records.contains { record in
+                if let url = record.wellKnownTypeURIPayload() {
+                    return url.host == "pidgn.app" || url.host == "www.pidgn.app"
+                }
+                return false
+            }
+
+            print("[NFC] isPidgnTag: \(isPidgnTag)")
+
+            if isPidgnTag {
+                session.alertMessage = "Letter unsealed!"
+                session.invalidate()
+                self.complete(with: .success(()))
+            } else {
+                session.invalidate(errorMessage: "This isn't a Pidgn magnet.")
+                self.complete(with: .failure(NFCError.invalidTag))
+            }
+        }
+    }
+
+    private func handleWriteTag(_ tag: any NFCNDEFTag, session: NFCNDEFReaderSession) {
+        tag.queryNDEFStatus { status, _, error in
+            if let error {
+                session.invalidate(errorMessage: "Could not read tag status.")
+                self.complete(with: .failure(error))
+                return
+            }
+
+            guard status == .readWrite else {
+                session.invalidate(errorMessage: "Tag is not writable.")
+                self.complete(with: .failure(NFCError.notWritable))
+                return
+            }
+
+            guard let url = URL(string: "https://pidgn.app/open"),
+                  let payload = NFCNDEFPayload.wellKnownTypeURIPayload(url: url) else {
+                session.invalidate(errorMessage: "Could not create URL payload.")
+                self.complete(with: .failure(NFCError.payloadError))
+                return
+            }
+
+            let message = NFCNDEFMessage(records: [payload])
+
+            tag.writeNDEF(message) { error in
                 if let error {
-                    session.invalidate(errorMessage: "Could not read tag status.")
+                    session.invalidate(errorMessage: "Write failed: \(error.localizedDescription)")
                     self.complete(with: .failure(error))
-                    return
-                }
-
-                guard status == .readWrite else {
-                    session.invalidate(errorMessage: "Tag is not writable.")
-                    self.complete(with: .failure(NFCError.notWritable))
-                    return
-                }
-
-                guard let url = URL(string: "https://pidgn.app/open"),
-                      let payload = NFCNDEFPayload.wellKnownTypeURIPayload(url: url) else {
-                    session.invalidate(errorMessage: "Could not create URL payload.")
-                    self.complete(with: .failure(NFCError.payloadError))
-                    return
-                }
-
-                let message = NFCNDEFMessage(records: [payload])
-
-                tag.writeNDEF(message) { error in
-                    if let error {
-                        session.invalidate(errorMessage: "Write failed: \(error.localizedDescription)")
-                        self.complete(with: .failure(error))
-                    } else {
-                        session.alertMessage = "Magnet set up successfully!"
-                        session.invalidate()
-                        self.complete(with: .success(()))
-                    }
+                } else {
+                    session.alertMessage = "Magnet set up successfully!"
+                    session.invalidate()
+                    self.complete(with: .success(()))
                 }
             }
         }
     }
 
     func readerSession(_ session: NFCNDEFReaderSession, didInvalidateWithError error: Error) {
-        // Always call complete() — the helper no-ops if already fired from didDetectNDEFs.
-        // This prevents leaked continuations when didDetectNDEFs doesn't fire first.
+        print("[NFC] didInvalidateWithError: \(error.localizedDescription)")
         let nfcError = error as? NFCReaderError
+        print("[NFC] NFCReaderError code: \(nfcError?.code.rawValue ?? -1)")
         if nfcError?.code == .readerSessionInvalidationErrorFirstNDEFTagRead {
             // Successful read — didDetectNDEFs likely already completed with .success.
             // Call .success again as a safety net (no-ops if already fired).

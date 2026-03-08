@@ -18,6 +18,10 @@ struct MessageRevealView: View {
 
     private let bgColor = Color(red: 0.11, green: 0.09, blue: 0.07)
 
+    private var mood: Stationery {
+        Stationery(rawValue: message.stationery ?? "parchment") ?? .parchment
+    }
+
     var body: some View {
         ZStack {
             bgColor.ignoresSafeArea()
@@ -29,12 +33,12 @@ struct MessageRevealView: View {
                 if !showContent {
                     VStack(spacing: 28) {
                         ZStack {
-                            // Warm glow
+                            // Warm glow — tinted to stationery accent
                             Circle()
                                 .fill(
                                     RadialGradient(
                                         colors: [
-                                            PidgnTheme.accent.opacity(envelopeOpened ? 0.2 : 0.04),
+                                            mood.accentColor.opacity(envelopeOpened ? 0.2 : 0.04),
                                             Color.clear
                                         ],
                                         center: .center,
@@ -44,15 +48,15 @@ struct MessageRevealView: View {
                                 )
                                 .frame(width: 280, height: 280)
 
-                            // Envelope card
+                            // Envelope card — uses stationery gradient
                             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                .fill(PidgnTheme.sand)
+                                .fill(mood.paperGradient)
                                 .frame(width: 200, height: 140)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 24, style: .continuous)
                                         .stroke(Color.white.opacity(0.3), lineWidth: 1)
                                 )
-                                .shadow(color: PidgnTheme.accent.opacity(0.25), radius: 30, y: 8)
+                                .shadow(color: mood.accentColor.opacity(0.25), radius: 30, y: 8)
                                 .scaleEffect(envelopeOpened ? 1.05 : 1.0)
 
                             // Seal that breaks
@@ -87,47 +91,82 @@ struct MessageRevealView: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.85)))
                 }
 
-                // Content phase
+                // Content phase — stationery paper
                 if showContent {
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 20) {
-                            VStack(spacing: 4) {
-                                Text("From")
-                                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                                    .foregroundStyle(PidgnTheme.sand.opacity(0.3))
-                                    .textCase(.uppercase)
-                                    .tracking(2.5)
+                        VStack(spacing: 0) {
+                            // Paper card with stationery background
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .fill(mood.paperGradient)
 
-                                Text(message.fromDisplayName)
-                                    .font(.system(size: 22, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(PidgnTheme.sand)
+                                // Ruled lines (for text/default)
+                                if message.type != "photo" {
+                                    VStack(spacing: 0) {
+                                        ForEach(0..<8, id: \.self) { _ in
+                                            Color.clear
+                                                .frame(height: 30)
+                                                .overlay(alignment: .bottom) {
+                                                    Rectangle()
+                                                        .fill(mood.lineColor)
+                                                        .frame(height: 1)
+                                                }
+                                        }
+                                    }
+                                    .padding(.horizontal, 24)
+                                    .padding(.top, 80)
+                                }
+
+                                VStack(spacing: 16) {
+                                    // From header
+                                    VStack(spacing: 4) {
+                                        Text("From")
+                                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                                            .foregroundStyle(mood.textColor.opacity(0.35))
+                                            .textCase(.uppercase)
+                                            .tracking(2.5)
+
+                                        Text(message.fromDisplayName)
+                                            .font(.system(size: 20, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(mood.textColor)
+                                    }
+                                    .padding(.top, 28)
+
+                                    // Divider
+                                    HStack(spacing: 8) {
+                                        Rectangle()
+                                            .fill(mood.accentColor.opacity(0.2))
+                                            .frame(width: 24, height: 1)
+                                        Circle()
+                                            .fill(mood.accentColor.opacity(0.4))
+                                            .frame(width: 4, height: 4)
+                                        Rectangle()
+                                            .fill(mood.accentColor.opacity(0.2))
+                                            .frame(width: 24, height: 1)
+                                    }
+
+                                    // Message content
+                                    revealContent
+                                        .padding(.horizontal, 20)
+
+                                    // Timestamp
+                                    if let sentAt = message.sentAt {
+                                        Text(formattedDate(sentAt))
+                                            .font(.system(size: 11, design: .rounded))
+                                            .foregroundStyle(mood.textColor.opacity(0.25))
+                                            .padding(.top, 8)
+                                    }
+
+                                    Spacer(minLength: 24)
+                                }
+                                .padding(.bottom, 8)
                             }
-                            .padding(.top, 40)
-
-                            // Elegant divider
-                            HStack(spacing: 8) {
-                                Rectangle()
-                                    .fill(PidgnTheme.sand.opacity(0.08))
-                                    .frame(width: 24, height: 1)
-                                Circle()
-                                    .fill(PidgnTheme.accent.opacity(0.4))
-                                    .frame(width: 4, height: 4)
-                                Rectangle()
-                                    .fill(PidgnTheme.sand.opacity(0.08))
-                                    .frame(width: 24, height: 1)
-                            }
-
-                            revealContent
-                                .padding(.horizontal, 8)
-
-                            if let sentAt = message.sentAt {
-                                Text(formattedDate(sentAt))
-                                    .font(.system(size: 11, design: .rounded))
-                                    .foregroundStyle(PidgnTheme.sand.opacity(0.2))
-                                    .padding(.top, 12)
-                            }
+                            .frame(minHeight: 360)
+                            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            .shadow(color: mood.accentColor.opacity(0.15), radius: 20, y: 8)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 20)
                         }
-                        .padding(.horizontal, 24)
                     }
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
@@ -171,13 +210,13 @@ struct MessageRevealView: View {
                             .frame(maxHeight: 280)
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     } placeholder: {
-                        ProgressView().tint(PidgnTheme.sand)
+                        ProgressView().tint(mood.accentColor)
                     }
                 }
                 if !message.content.isEmpty {
                     Text(message.content)
-                        .font(.system(size: 16, design: .rounded))
-                        .foregroundStyle(PidgnTheme.sand.opacity(0.85))
+                        .font(.custom("Bradley Hand", size: 16))
+                        .foregroundStyle(mood.textColor.opacity(0.85))
                         .multilineTextAlignment(.center)
                 }
             }
@@ -185,34 +224,30 @@ struct MessageRevealView: View {
             VStack(spacing: 12) {
                 Image(systemName: "waveform")
                     .font(.system(size: 36))
-                    .foregroundStyle(PidgnTheme.accent)
+                    .foregroundStyle(mood.accentColor)
                 Text("Voice note — open to listen")
                     .font(.system(size: 14, design: .rounded))
-                    .foregroundStyle(PidgnTheme.sand.opacity(0.45))
+                    .foregroundStyle(mood.textColor.opacity(0.45))
             }
         default:
             Text(message.content)
-                .font(.system(size: 24, weight: .regular, design: .serif))
-                .foregroundStyle(PidgnTheme.sand)
+                .font(.custom("Bradley Hand", size: 22))
+                .foregroundStyle(mood.textColor)
                 .multilineTextAlignment(.center)
-                .lineSpacing(10)
+                .lineSpacing(8)
         }
     }
 
     private func startAnimation() {
-        // Seal cracks and flies away
         withAnimation(.spring(.bouncy, blendDuration: 0.3).delay(0.5)) {
             sealBroken = true
         }
-        // Envelope opens
         withAnimation(.easeInOut(duration: 0.6).delay(0.8)) {
             envelopeOpened = true
         }
-        // Content appears
         withAnimation(.easeInOut(duration: 0.5).delay(2.0)) {
             showContent = true
         }
-        // Done button
         withAnimation(.spring(.snappy).delay(2.6)) {
             showDone = true
         }
@@ -249,7 +284,8 @@ struct Triangle: Shape {
             id: "1", fromUserId: "user1", fromDisplayName: "Mom",
             fromHouseholdId: "hh1", type: "text",
             content: "Hope you're having a great day! Don't forget to call grandma.",
-            mediaUrl: nil, sentAt: "2026-03-07T12:00:00.000Z",
+            mediaUrl: nil, stationery: "rosewater",
+            sentAt: "2026-03-07T12:00:00.000Z",
             isOpened: true, openedAt: "2026-03-07T14:00:00.000Z",
             openedByUserId: "user2"
         ),
