@@ -11,20 +11,28 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AuthService.self) var authService
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Binding var shouldOpenUnread: Bool
 
     var body: some View {
         Group {
-            if authService.isLoading {
-                // Splash / loading state while Firebase checks auth
-                VStack(spacing: 16) {
-                    Image(systemName: "envelope.fill")
-                        .font(.system(size: 60))
-                        .foregroundStyle(.blue)
-                    Text("Pidgn")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                    ProgressView()
+            if !hasCompletedOnboarding {
+                OnboardingView()
+            } else if authService.isLoading {
+                // Warm loading with personality
+                VStack(spacing: 20) {
+                    Image(systemName: "bird.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(PidgnTheme.accent)
+                        .symbolEffect(.bounce, options: .repeating.speed(0.5))
+
+                    VStack(spacing: 6) {
+                        Text("Pidgn")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                        Text("Letters carried with care.")
+                            .font(.system(size: 14, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } else if !authService.isAuthenticated {
                 SignInView()

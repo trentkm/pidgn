@@ -2,7 +2,7 @@
 //  SettingsView.swift
 //  Pidgn
 //
-//  Settings screen with household info, invite code generation, and sign out.
+//  Your nest — household settings, magnet setup, and account.
 
 import SwiftUI
 import UIKit
@@ -24,65 +24,72 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 // Profile
-                Section("Profile") {
-                    if let name = authService.userProfile?.displayName {
-                        HStack {
-                            Text("Name")
-                            Spacer()
-                            Text(name).foregroundStyle(.secondary)
+                Section {
+                    HStack(spacing: 14) {
+                        Text(String((authService.userProfile?.displayName ?? "?").prefix(1)).uppercased())
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .frame(width: 44, height: 44)
+                            .background(PidgnTheme.accent, in: Circle())
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(authService.userProfile?.displayName ?? "")
+                                .font(.system(.body, design: .rounded, weight: .semibold))
+                            Text(authService.userProfile?.email ?? "")
+                                .font(.system(size: 13, design: .rounded))
+                                .foregroundStyle(.secondary)
                         }
                     }
-                    if let email = authService.userProfile?.email {
-                        HStack {
-                            Text("Email")
-                            Spacer()
-                            Text(email).foregroundStyle(.secondary)
-                        }
-                    }
+                    .padding(.vertical, 4)
                 }
 
                 // Household
                 if let householdId {
-                    Section("Household") {
+                    Section {
                         HStack {
-                            Text("Household ID")
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Nest ID")
+                                    .font(.system(size: 13, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                                Text(copiedHouseholdId ? "Copied!" : householdId)
+                                    .font(.system(size: 13, design: .monospaced))
+                                    .foregroundStyle(copiedHouseholdId ? PidgnTheme.sage : .primary)
+                                    .lineLimit(1)
+                            }
                             Spacer()
-                            Text(householdId)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
+                            Image(systemName: copiedHouseholdId ? "checkmark.circle.fill" : "doc.on.doc")
+                                .foregroundStyle(copiedHouseholdId ? PidgnTheme.sage : .secondary)
+                                .font(.system(size: 14))
                         }
+                        .contentShape(Rectangle())
                         .onTapGesture {
                             UIPasteboard.general.string = householdId
-                            copiedHouseholdId = true
+                            withAnimation { copiedHouseholdId = true }
                             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                copiedHouseholdId = false
+                                withAnimation { copiedHouseholdId = false }
                             }
                         }
-
-                        if copiedHouseholdId {
-                            Text("Copied to clipboard!")
-                                .font(.caption)
-                                .foregroundStyle(.green)
-                        }
+                    } header: {
+                        Text("Your Nest")
+                    } footer: {
+                        Text("Share this with family so they can find your nest.")
                     }
 
                     // Invite
-                    Section("Invite Members") {
+                    Section {
                         if let code = inviteCode {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Invite Code")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
                                 Text(code)
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
-                                    .monospaced()
+                                    .font(.system(size: 24, weight: .semibold, design: .monospaced))
+                                    .tracking(3)
 
-                                Button("Copy Code") {
+                                Button {
                                     UIPasteboard.general.string = code
+                                } label: {
+                                    Label("Copy Code", systemImage: "doc.on.doc")
+                                        .font(.system(size: 13, design: .rounded))
                                 }
-                                .font(.caption)
+                                .tint(PidgnTheme.accent)
                             }
                         }
 
@@ -96,34 +103,47 @@ struct SettingsView: View {
                                     inviteCode == nil ? "Generate Invite Code" : "Generate New Code",
                                     systemImage: "link.badge.plus"
                                 )
+                                .font(.system(.body, design: .rounded))
                             }
                         }
+                        .tint(PidgnTheme.accent)
                         .disabled(isGeneratingInvite)
+                    } header: {
+                        Text("Invite to the Nest")
+                    } footer: {
+                        Text("Give this code to someone you'd like to join your household.")
                     }
                 }
 
-                // Magnet setup
-                Section("Fridge Magnet") {
+                // Magnet
+                Section {
                     Button {
                         setupMagnet()
                     } label: {
-                        if isSettingUpMagnet {
-                            ProgressView()
-                        } else {
-                            Label("Set Up Your Magnet", systemImage: "wave.3.right")
+                        HStack {
+                            if isSettingUpMagnet {
+                                ProgressView()
+                            } else {
+                                Label("Set Up Your Magnet", systemImage: "wave.3.right")
+                                    .font(.system(.body, design: .rounded))
+                            }
                         }
                     }
+                    .tint(PidgnTheme.accent)
                     .disabled(isSettingUpMagnet)
 
                     if let result = magnetSetupResult {
-                        Text(result)
-                            .font(.caption)
-                            .foregroundStyle(result.contains("Success") ? .green : .red)
+                        HStack(spacing: 8) {
+                            Image(systemName: result.contains("Success") ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            Text(result)
+                        }
+                        .font(.system(size: 13, design: .rounded))
+                        .foregroundStyle(result.contains("Success") ? PidgnTheme.sage : .red)
                     }
-
-                    Text("Hold your phone near a blank NFC magnet to program it. Once set up, tapping the magnet opens your mailbox.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                } header: {
+                    Text("Fridge Magnet")
+                } footer: {
+                    Text("Hold your phone near a blank NFC tag. Once programmed, tapping the magnet opens sealed letters.")
                 }
 
                 if let error = errorMessage {
@@ -139,9 +159,10 @@ struct SettingsView: View {
                     Button("Sign Out", role: .destructive) {
                         authService.signOut()
                     }
+                    .font(.system(.body, design: .rounded))
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle("Nest")
         }
     }
 
@@ -155,7 +176,6 @@ struct SettingsView: View {
                 switch result {
                 case .success:
                     magnetSetupResult = "Success! Your magnet is ready."
-                    // Update household nfcConfigured in background
                     if let householdId {
                         Task {
                             try? await APIService.shared.updateNfcConfigured(householdId: householdId)

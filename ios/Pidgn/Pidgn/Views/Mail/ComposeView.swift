@@ -2,7 +2,7 @@
 //  ComposeView.swift
 //  Pidgn
 //
-//  Compose and send text, photo, or voice messages.
+//  Write a letter — text, photo, or voice. Like sitting down with pen and paper.
 
 import SwiftUI
 import PhotosUI
@@ -55,35 +55,70 @@ struct ComposeView: View {
         }
     }
 
+    private static let placeholders = [
+        "What's on your mind?",
+        "Write something lovely...",
+        "Dear friend...",
+        "A few words go a long way...",
+        "Say what the heart says...",
+    ]
+
+    private var placeholder: String {
+        Self.placeholders[abs(Date().hashValue) % Self.placeholders.count]
+    }
+
     var body: some View {
         Form {
+            // Warm header
+            Section {
+                VStack(spacing: 4) {
+                    Image(systemName: "paperplane")
+                        .font(.system(size: 28))
+                        .foregroundStyle(PidgnTheme.accent)
+                    Text("Write a Letter")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    Text("Take your time. No rush.")
+                        .font(.system(size: 13, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .listRowBackground(Color.clear)
+            }
+
             // Recipient picker
-            Section("To") {
+            Section {
                 if isLoadingContacts {
                     ProgressView()
                 } else if contacts.isEmpty {
-                    Text("No connected households yet")
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 8) {
+                        Image(systemName: "bird")
+                            .foregroundStyle(.tertiary)
+                        Text("No one in your flock yet")
+                            .foregroundStyle(.secondary)
+                            .font(.system(size: 15, design: .rounded))
+                    }
                 } else {
                     Picker("Recipient", selection: $selectedContact) {
-                        Text("Select a household").tag(nil as Contact?)
+                        Text("Choose someone").tag(nil as Contact?)
                         ForEach(contacts) { contact in
                             Text(contact.name).tag(contact as Contact?)
                         }
                     }
                 }
+            } header: {
+                Text("Deliver to")
             }
 
             // Message type picker
-            Section("Type") {
+            Section {
                 Picker("Message Type", selection: $messageType) {
-                    Text("Text").tag(MessageType.text)
-                    Text("Photo").tag(MessageType.photo)
-                    Text("Voice").tag(MessageType.voice)
+                    Label("Text", systemImage: "text.alignleft").tag(MessageType.text)
+                    Label("Photo", systemImage: "photo").tag(MessageType.photo)
+                    Label("Voice", systemImage: "mic").tag(MessageType.voice)
                 }
                 .pickerStyle(.segmented)
                 .onChange(of: messageType) { _, _ in
-                    // Clean up when switching types
                     selectedPhoto = nil
                     selectedImage = nil
                     if audioRecorder.isRecording {
@@ -106,13 +141,16 @@ struct ComposeView: View {
 
             if let error = errorMessage {
                 Section {
-                    Text(error)
-                        .foregroundStyle(.red)
-                        .font(.caption)
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                        Text(error)
+                    }
+                    .foregroundStyle(.red)
+                    .font(.caption)
                 }
             }
         }
-        .navigationTitle("Compose")
+        .navigationTitle("New Letter")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -122,8 +160,13 @@ struct ComposeView: View {
                     if isSending {
                         ProgressView()
                     } else {
-                        Text("Send")
-                            .fontWeight(.semibold)
+                        HStack(spacing: 4) {
+                            Text("Send")
+                            Image(systemName: "paperplane.fill")
+                                .font(.system(size: 12))
+                        }
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(canSend ? PidgnTheme.accent : .secondary)
                     }
                 }
                 .disabled(!canSend)
@@ -132,17 +175,17 @@ struct ComposeView: View {
         .task {
             await loadContacts()
         }
-        .alert("Mail Sent!", isPresented: $showSentConfirmation) {
+        .alert("Off it goes!", isPresented: $showSentConfirmation) {
             Button("OK") { dismiss() }
         } message: {
-            Text("Your message has been delivered.")
+            Text("Your letter has taken flight. 🕊️")
         }
     }
 
     // MARK: - Text Section
 
     private var textSection: some View {
-        Section("Message") {
+        Section("Your Letter") {
             TextEditor(text: $messageText)
                 .frame(minHeight: 150)
 
@@ -150,7 +193,7 @@ struct ComposeView: View {
                 Spacer()
                 Text("\(messageText.count)/500")
                     .font(.caption)
-                    .foregroundStyle(messageText.count > 500 ? .red : .secondary)
+                    .foregroundStyle(messageText.count > 500 ? Color.red : Color.secondary)
             }
         }
     }
@@ -165,7 +208,7 @@ struct ComposeView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(maxHeight: 300)
-                        .cornerRadius(12)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     Button("Remove Photo", role: .destructive) {
                         selectedPhoto = nil
@@ -196,7 +239,7 @@ struct ComposeView: View {
                     Spacer()
                     Text("\(messageText.count)/200")
                         .font(.caption)
-                        .foregroundStyle(messageText.count > 200 ? .red : .secondary)
+                        .foregroundStyle(messageText.count > 200 ? Color.red : Color.secondary)
                 }
             }
         }
@@ -205,7 +248,7 @@ struct ComposeView: View {
     // MARK: - Voice Section
 
     private var voiceSection: some View {
-        Section("Voice Memo") {
+        Section("Voice Note") {
             if audioRecorder.isRecording {
                 VStack(spacing: 12) {
                     HStack {
@@ -213,10 +256,10 @@ struct ComposeView: View {
                             .fill(Color.red)
                             .frame(width: 12, height: 12)
                         Text("Recording...")
-                            .font(.headline)
+                            .font(.system(.headline, design: .rounded))
                         Spacer()
                         Text(formatDuration(audioRecorder.recordingDuration))
-                            .font(.headline)
+                            .font(.system(.headline, design: .rounded))
                             .monospacedDigit()
                     }
 
@@ -224,6 +267,7 @@ struct ComposeView: View {
                         value: audioRecorder.recordingDuration,
                         total: AudioRecorderService.maxDuration
                     )
+                    .tint(PidgnTheme.accent)
 
                     Button("Stop Recording") {
                         audioRecorder.stopRecording()
@@ -237,19 +281,18 @@ struct ComposeView: View {
                 VStack(spacing: 12) {
                     HStack {
                         Image(systemName: "waveform")
-                            .foregroundStyle(.blue)
-                        Text("Voice memo recorded")
+                            .foregroundStyle(PidgnTheme.accent)
+                        Text("Voice note ready")
+                            .font(.system(.body, design: .rounded))
                         Spacer()
                         Text(formatDuration(audioRecorder.recordingDuration))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
 
-                    HStack {
-                        Button("Re-record", role: .destructive) {
-                            audioRecorder.deleteRecording()
-                            hasVoiceRecording = false
-                        }
+                    Button("Re-record", role: .destructive) {
+                        audioRecorder.deleteRecording()
+                        hasVoiceRecording = false
                     }
                 }
             } else {
@@ -257,9 +300,11 @@ struct ComposeView: View {
                     audioRecorder.startRecording()
                 } label: {
                     Label("Start Recording", systemImage: "mic.fill")
+                        .font(.system(.body, design: .rounded))
                 }
+                .tint(PidgnTheme.accent)
 
-                Text("Max 60 seconds")
+                Text("Up to 60 seconds — say it from the heart.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

@@ -147,19 +147,21 @@ Users can send and receive all three MVP message types: text, photo + caption, a
 ### Tasks
 
 - [ ] **iOS:** App icon and launch screen
-- [ ] **iOS:** Onboarding flow — explain the concept, guide through setup
-- [ ] **iOS:** Empty states — no messages yet, no connections yet
-- [ ] **iOS:** Error handling — network failures, auth expiry, NFC not available
+- [x] **iOS:** Onboarding flow — explain the concept, guide through setup
+- [x] **iOS:** Empty states — no messages yet, no connections yet
+- [x] **iOS:** Error handling — network failures, auth expiry, NFC not available
 - [ ] **iOS:** Offline support — cache unread mail, queue opens for sync
-- [ ] **iOS:** Settings screen — household info, manage members, magnet setup
-- [ ] **Server:** Rate limiting on all endpoints
-- [ ] **Server:** Input validation and sanitization
-- [ ] **Firestore:** Lock down security rules (remove test mode)
+- [x] **iOS:** Settings screen — household info, manage members, magnet setup
+- [x] **Server:** Rate limiting on all endpoints
+- [x] **Server:** Input validation and sanitization
+- [x] **Firestore:** Lock down security rules (remove test mode)
 - [ ] **Firebase:** Set up budget alerts
 - [ ] **iOS:** TestFlight build — internal testing
 - [ ] App Store listing — screenshots, description, keywords
-- [ ] Privacy policy page on pidgn.app (required for App Store)
+- [x] Privacy policy page on pidgn.app (required for App Store)
 - [ ] App Store submission
+
+> **Status:** In progress. Server hardened (rate limiting, input validation, body size limits). Firestore/Storage rules deployed and locked down. iOS onboarding, empty states, and error handling complete. Privacy policy page added. Remaining: app icon, offline support, budget alerts, TestFlight, App Store.
 
 ### Definition of Done
 App is live on the App Store (or in TestFlight for beta users).

@@ -21,7 +21,7 @@ class AuthService {
     nonisolated(unsafe) private var authStateListener: AuthStateDidChangeListenerHandle?
     private let db = Firestore.firestore()
 
-    struct UserProfile {
+    struct UserProfile {    
         let uid: String
         let displayName: String
         let email: String

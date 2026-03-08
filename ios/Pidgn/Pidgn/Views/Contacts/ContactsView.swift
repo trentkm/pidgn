@@ -2,7 +2,7 @@
 //  ContactsView.swift
 //  Pidgn
 //
-//  Shows connected households and pending requests.
+//  Your flock — the households you're connected with.
 
 import SwiftUI
 
@@ -33,53 +33,125 @@ struct ContactsView: View {
         NavigationStack {
             Group {
                 if isLoading && contacts.isEmpty {
-                    ProgressView("Loading contacts...")
+                    VStack(spacing: 16) {
+                        Image(systemName: "bird.fill")
+                            .font(.system(size: 32))
+                            .foregroundStyle(PidgnTheme.accent)
+                            .symbolEffect(.pulse)
+                        Text("Gathering your flock...")
+                            .font(.system(size: 15, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+                } else if let error = errorMessage, contacts.isEmpty {
+                    ContentUnavailableView {
+                        Label("Couldn't find the flock", systemImage: "bird")
+                    } description: {
+                        Text(error)
+                    } actions: {
+                        Button("Try Again") {
+                            Task { await fetchContacts() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(PidgnTheme.accent)
+                    }
                 } else if contacts.isEmpty {
-                    ContentUnavailableView(
-                        "No Connections",
-                        systemImage: "person.2",
-                        description: Text("Connect with another household to start sending messages.")
-                    )
+                    VStack(spacing: 20) {
+                        Spacer()
+
+                        ZStack {
+                            Circle()
+                                .fill(PidgnTheme.sand)
+                                .frame(width: 120, height: 120)
+
+                            Image(systemName: "bird.fill")
+                                .font(.system(size: 44))
+                                .foregroundStyle(PidgnTheme.accent.opacity(0.6))
+                        }
+
+                        VStack(spacing: 6) {
+                            Text("No flock yet")
+                                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                            Text("Connect with another household\nto start sending letters back and forth.")
+                                .font(.system(size: 15, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        Button {
+                            showAddConnection = true
+                        } label: {
+                            Label("Grow Your Flock", systemImage: "plus.circle.fill")
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(PidgnTheme.accent)
+                        .padding(.top, 8)
+
+                        Spacer()
+                        Spacer()
+                    }
+                    .padding(.horizontal, 32)
                 } else {
                     List {
-                        // Incoming requests
                         if !incomingRequests.isEmpty {
-                            Section("Pending Requests") {
+                            Section {
                                 ForEach(incomingRequests) { contact in
-                                    IncomingRequestRow(
-                                        contact: contact,
-                                        onAccept: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(contact.householdName)
+                                                .font(.system(.body, design: .rounded, weight: .medium))
+                                            Text("Wants to join your flock")
+                                                .font(.system(size: 13, design: .rounded))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        Button("Welcome In") {
                                             Task { await acceptRequest(fromHouseholdId: contact.householdId) }
                                         }
-                                    )
+                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .tint(PidgnTheme.sage)
+                                        .buttonStyle(.borderedProminent)
+                                        .controlSize(.small)
+                                    }
+                                }
+                            } header: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "bell.fill")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(PidgnTheme.accent)
+                                    Text("Knocking at the Door")
                                 }
                             }
                         }
 
-                        // Connected households
                         if !acceptedContacts.isEmpty {
-                            Section("Connected") {
+                            Section("Your Flock") {
                                 ForEach(acceptedContacts) { contact in
-                                    HStack {
-                                        Image(systemName: "house.fill")
-                                            .foregroundStyle(.blue)
+                                    HStack(spacing: 10) {
+                                        Text(String(contact.householdName.prefix(1)).uppercased())
+                                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(.white)
+                                            .frame(width: 28, height: 28)
+                                            .background(PidgnTheme.accent, in: Circle())
+
                                         Text(contact.householdName)
-                                            .font(.body)
+                                            .font(.system(.body, design: .rounded))
                                     }
                                 }
                             }
                         }
 
-                        // Outgoing pending
                         if !outgoingRequests.isEmpty {
-                            Section("Sent Requests") {
+                            Section("On the Wing") {
                                 ForEach(outgoingRequests) { contact in
                                     HStack {
                                         Text(contact.householdName)
+                                            .font(.system(.body, design: .rounded))
                                         Spacer()
-                                        Text("Pending")
-                                            .font(.caption)
+                                        Text("Waiting...")
+                                            .font(.system(size: 13, design: .rounded))
                                             .foregroundStyle(.secondary)
+                                            .italic()
                                     }
                                 }
                             }
@@ -87,13 +159,14 @@ struct ContactsView: View {
                     }
                 }
             }
-            .navigationTitle("Contacts")
+            .navigationTitle("Flock")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showAddConnection = true
                     } label: {
                         Image(systemName: "plus")
+                            .foregroundStyle(PidgnTheme.accent)
                     }
                 }
             }
@@ -138,31 +211,6 @@ struct ContactsView: View {
             await fetchContacts()
         } catch {
             errorMessage = error.localizedDescription
-        }
-    }
-}
-
-// MARK: - Incoming Request Row
-
-struct IncomingRequestRow: View {
-    let contact: APIService.ContactEntry
-    let onAccept: () -> Void
-
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text(contact.householdName)
-                    .font(.body)
-                Text("Wants to connect")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            Button("Accept", action: onAccept)
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
         }
     }
 }

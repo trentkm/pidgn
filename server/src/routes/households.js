@@ -24,6 +24,10 @@ router.post('/create', async (req, res) => {
       return res.status(400).json({ error: 'Household name is required' });
     }
 
+    if (name.trim().length > 50) {
+      return res.status(400).json({ error: 'Household name must be 50 characters or fewer' });
+    }
+
     const db = admin.firestore();
     const now = admin.firestore.FieldValue.serverTimestamp();
 

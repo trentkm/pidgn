@@ -10,12 +10,12 @@ router.post('/register', async (req, res) => {
     const { token, deviceId } = req.body;
     const uid = req.user.uid;
 
-    if (!token || typeof token !== 'string') {
-      return res.status(400).json({ error: 'FCM token is required' });
+    if (!token || typeof token !== 'string' || token.length > 500) {
+      return res.status(400).json({ error: 'Valid FCM token is required' });
     }
 
-    if (!deviceId || typeof deviceId !== 'string') {
-      return res.status(400).json({ error: 'deviceId is required' });
+    if (!deviceId || typeof deviceId !== 'string' || deviceId.length > 200) {
+      return res.status(400).json({ error: 'Valid deviceId is required' });
     }
 
     const db = admin.firestore();

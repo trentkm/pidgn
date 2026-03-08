@@ -24,9 +24,9 @@ struct AddConnectionView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
             } header: {
-                Text("Connect to a Household")
+                Text("Add to Your Flock")
             } footer: {
-                Text("Ask the other household for their Household ID from Settings.")
+                Text("Ask the other household for their ID from the Nest tab.")
             }
 
             if let error = errorMessage {
@@ -37,7 +37,7 @@ struct AddConnectionView: View {
                 }
             }
         }
-        .navigationTitle("Add Connection")
+        .navigationTitle("Grow Your Flock")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -56,13 +56,13 @@ struct AddConnectionView: View {
                 .disabled(householdCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isConnecting)
             }
         }
-        .alert("Request Sent!", isPresented: $showSuccess) {
+        .alert("Request sent!", isPresented: $showSuccess) {
             Button("Done") { dismiss() }
         } message: {
             if let name = connectedName {
-                Text("Connection request sent to \(name). They'll need to accept it.")
+                Text("A little bird is on its way to \(name). They'll need to accept.")
             } else {
-                Text("Connection request sent. They'll need to accept it.")
+                Text("A little bird is on its way. They'll need to accept.")
             }
         }
     }

@@ -40,14 +40,26 @@ class APIService {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let urlError as URLError where urlError.code == .notConnectedToInternet
+            || urlError.code == .networkConnectionLost
+            || urlError.code == .timedOut
+            || urlError.code == .cannotConnectToHost {
+            throw APIError.networkError
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
         }
 
+        if httpResponse.statusCode == 429 {
+            throw APIError.rateLimited
+        }
+
         guard (200...299).contains(httpResponse.statusCode) else {
-            // Try to extract error message from response body
             if let errorBody = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let message = errorBody["error"] as? String {
                 throw APIError.serverError(statusCode: httpResponse.statusCode, message: message)
@@ -262,6 +274,8 @@ enum APIError: LocalizedError {
     case invalidURL
     case notAuthenticated
     case invalidResponse
+    case networkError
+    case rateLimited
     case serverError(statusCode: Int, message: String)
 
     var errorDescription: String? {
@@ -272,6 +286,10 @@ enum APIError: LocalizedError {
             return "You must be signed in to perform this action."
         case .invalidResponse:
             return "Received an invalid response from the server."
+        case .networkError:
+            return "No internet connection. Please check your network and try again."
+        case .rateLimited:
+            return "Too many requests. Please wait a moment and try again."
         case .serverError(_, let message):
             return message
         }

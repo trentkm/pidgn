@@ -1,7 +1,6 @@
 //
 //  SignUpView.swift
 //  Pidgn
-//
 
 import SwiftUI
 
@@ -16,20 +15,17 @@ struct SignUpView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            // Header
             VStack(spacing: 8) {
                 Text("Create Account")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                Text("Join Pidgn and connect with your family.")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                Text("Join the flock and start sending letters.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            // Form fields
-            VStack(spacing: 16) {
+            VStack(spacing: 14) {
                 TextField("Display Name", text: $displayName)
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.name)
@@ -47,7 +43,6 @@ struct SignUpView: View {
                     .textContentType(.newPassword)
             }
 
-            // Error message
             if let error = authService.errorMessage {
                 Text(error)
                     .font(.caption)
@@ -55,35 +50,30 @@ struct SignUpView: View {
                     .multilineTextAlignment(.center)
             }
 
-            // Sign up button
             Button {
                 Task {
-                    await authService.signUp(
-                        email: email,
-                        password: password,
-                        displayName: displayName
-                    )
+                    await authService.signUp(email: email, password: password, displayName: displayName)
                 }
             } label: {
                 if authService.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
+                    ProgressView().tint(.white).frame(maxWidth: .infinity)
                 } else {
                     Text("Sign Up")
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
                         .frame(maxWidth: .infinity)
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(
-                displayName.isEmpty || email.isEmpty || password.isEmpty || authService.isLoading
-            )
+            .padding(.vertical, 14)
+            .foregroundStyle(.white)
+            .background(PidgnTheme.accent, in: RoundedRectangle(cornerRadius: 12))
+            .disabled(displayName.isEmpty || email.isEmpty || password.isEmpty || authService.isLoading)
+            .opacity(displayName.isEmpty || email.isEmpty || password.isEmpty ? 0.5 : 1.0)
 
-            // Back to sign in
             Button("Already have an account? Sign In") {
                 dismiss()
             }
             .font(.subheadline)
+            .foregroundStyle(PidgnTheme.accent)
 
             Spacer()
         }

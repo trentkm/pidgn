@@ -2,6 +2,7 @@
 //  HouseholdSetupView.swift
 //  Pidgn
 //
+//  Build your nest — create or join a household.
 
 import SwiftUI
 
@@ -13,36 +14,47 @@ struct HouseholdSetupView: View {
             VStack(spacing: 32) {
                 Spacer()
 
+                // Warm illustration area
+                ZStack {
+                    Circle()
+                        .fill(PidgnTheme.sand)
+                        .frame(width: 130, height: 130)
+
+                    Image(systemName: "house.fill")
+                        .font(.system(size: 52))
+                        .foregroundStyle(PidgnTheme.accent)
+                }
+
                 VStack(spacing: 8) {
-                    Image(systemName: "house.and.flag.fill")
-                        .font(.system(size: 60))
-                        .foregroundStyle(.blue)
-                    Text("Set Up Your Household")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text("Create a new household or join an existing one to start sending mail.")
-                        .font(.subheadline)
+                    Text("Build Your Nest")
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                    Text("A nest is your household — the home\nyour letters fly to and from.")
+                        .font(.system(size: 15, design: .rounded))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
 
-                VStack(spacing: 16) {
+                VStack(spacing: 14) {
                     NavigationLink {
                         CreateHouseholdView()
                     } label: {
-                        Label("Create a New Household", systemImage: "plus.circle.fill")
+                        Label("Create a Nest", systemImage: "plus.circle.fill")
+                            .font(.system(.body, design: .rounded, weight: .semibold))
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(PidgnTheme.accent)
                     .controlSize(.large)
 
                     NavigationLink {
                         JoinHouseholdView()
                     } label: {
-                        Label("Join an Existing Household", systemImage: "person.badge.plus")
+                        Label("Join an Existing Nest", systemImage: "person.badge.plus")
+                            .font(.system(.body, design: .rounded))
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
+                    .tint(PidgnTheme.accent)
                     .controlSize(.large)
                 }
 
@@ -51,7 +63,7 @@ struct HouseholdSetupView: View {
                 Button("Sign Out") {
                     authService.signOut()
                 }
-                .font(.subheadline)
+                .font(.system(size: 14, design: .rounded))
                 .foregroundStyle(.secondary)
                 .padding(.bottom, 32)
             }

@@ -1,7 +1,6 @@
 //
 //  SignInView.swift
 //  Pidgn
-//
 
 import SwiftUI
 
@@ -16,23 +15,24 @@ struct SignInView: View {
             VStack(spacing: 24) {
                 Spacer()
 
-                // App branding
-                VStack(spacing: 8) {
+                // Branding
+                VStack(spacing: 10) {
                     Image(systemName: "envelope.fill")
-                        .font(.system(size: 60))
-                        .foregroundStyle(.blue)
+                        .font(.system(size: 52))
+                        .foregroundStyle(PidgnTheme.accent)
+
                     Text("Pidgn")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                    Text("Family mail, delivered to your fridge.")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+
+                    Text("Letters carried with care.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
-                // Form fields
-                VStack(spacing: 16) {
+                // Fields
+                VStack(spacing: 14) {
                     TextField("Email", text: $email)
                         .textFieldStyle(.roundedBorder)
                         .textContentType(.emailAddress)
@@ -45,7 +45,6 @@ struct SignInView: View {
                         .textContentType(.password)
                 }
 
-                // Error message
                 if let error = authService.errorMessage {
                     Text(error)
                         .font(.caption)
@@ -53,29 +52,28 @@ struct SignInView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                // Sign in button
                 Button {
-                    Task {
-                        await authService.signIn(email: email, password: password)
-                    }
+                    Task { await authService.signIn(email: email, password: password) }
                 } label: {
                     if authService.isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
+                        ProgressView().tint(.white).frame(maxWidth: .infinity)
                     } else {
                         Text("Sign In")
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .padding(.vertical, 14)
+                .foregroundStyle(.white)
+                .background(PidgnTheme.accent, in: RoundedRectangle(cornerRadius: 12))
                 .disabled(email.isEmpty || password.isEmpty || authService.isLoading)
+                .opacity(email.isEmpty || password.isEmpty ? 0.5 : 1.0)
 
-                // Sign up link
                 Button("Don't have an account? Sign Up") {
                     showSignUp = true
                 }
                 .font(.subheadline)
+                .foregroundStyle(PidgnTheme.accent)
 
                 Spacer()
             }

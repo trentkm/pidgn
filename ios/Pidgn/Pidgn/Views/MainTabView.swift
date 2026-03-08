@@ -14,17 +14,17 @@ struct MainTabView: View {
         TabView {
             MailboxView(shouldOpenUnread: shouldOpenUnread)
                 .tabItem {
-                    Label("Mailbox", systemImage: "envelope.fill")
+                    Label("Roost", systemImage: "envelope.fill")
                 }
 
             ContactsView()
                 .tabItem {
-                    Label("Contacts", systemImage: "person.2.fill")
+                    Label("Flock", systemImage: "bird.fill")
                 }
 
             SettingsView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
+                    Label("Nest", systemImage: "house.fill")
                 }
         }
     }
