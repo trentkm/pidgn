@@ -61,12 +61,24 @@ service cloud.firestore {
       }
 
       // ─── households/{householdId}/mailbox/{messageId} ───
-      // TODO: Add mailbox rules in Phase 2
 
-      // ─── Reserved for future subcollections ─────────────
+      match /mailbox/{messageId} {
+        // Household members can read their mailbox
+        allow read: if isHouseholdMember(householdId);
+
+        // Writes are handled by Admin SDK (server-side)
+        allow write: if false;
+      }
     }
 
     // ─── contacts/{householdId}/connected/{targetHouseholdId} ─
-    // TODO: Add contacts rules in Phase 2/3
+
+    match /contacts/{householdId}/connected/{targetHouseholdId} {
+      // Household members can read their contacts
+      allow read: if isHouseholdMember(householdId);
+
+      // Writes are handled by Admin SDK (server-side)
+      allow write: if false;
+    }
   }
 }

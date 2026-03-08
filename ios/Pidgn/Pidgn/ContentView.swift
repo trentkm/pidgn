@@ -30,7 +30,7 @@ struct ContentView: View {
             } else if authService.userProfile?.householdId == nil {
                 HouseholdSetupView()
             } else {
-                HomeView()
+                MainTabView()
             }
         }
     }

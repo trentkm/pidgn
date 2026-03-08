@@ -17,6 +17,9 @@ if (process.env.FIREBASE_PROJECT_ID) {
 
 const { requireAuth } = require('./middleware/auth');
 const householdsRouter = require('./routes/households');
+const contactsRouter = require('./routes/contacts');
+const mailRouter = require('./routes/mail');
+const fcmRouter = require('./routes/fcm');
 
 const app = express();
 app.use(cors());
@@ -27,6 +30,9 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/households', requireAuth, householdsRouter);
+app.use('/households', requireAuth, contactsRouter);
+app.use('/mail', requireAuth, mailRouter);
+app.use('/fcm', requireAuth, fcmRouter);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

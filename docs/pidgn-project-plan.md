@@ -67,17 +67,19 @@ Two test users can sign up, one creates a household, the other joins it via invi
 
 ### Tasks
 
-- [ ] **Server:** `POST /households/connect` — send connection request to another household
-- [ ] **Server:** `POST /households/connect/accept` — accept connection request
-- [ ] **iOS:** Contact list screen — show connected households
-- [ ] **iOS:** "Add a connection" flow — search by household code or link
-- [ ] **iOS:** Compose screen — select recipient household, write text message, send
-- [ ] **Server:** `POST /mail/send` — validate, write to Firestore, trigger FCM push
-- [ ] **iOS:** FCM integration — register for push notifications, store token
-- [ ] **Server:** `POST /fcm/register` — store device FCM token
-- [ ] **iOS:** Mailbox screen — list received messages, sorted by date
-- [ ] **iOS:** Message detail screen — show full message content
-- [ ] **Server:** `GET /households/:id/mailbox` — paginated mailbox query
+- [x] **Server:** `POST /households/connect` — send connection request to another household
+- [x] **Server:** `POST /households/connect/accept` — accept connection request
+- [x] **iOS:** Contact list screen — show connected households
+- [x] **iOS:** "Add a connection" flow — search by household code or link
+- [x] **iOS:** Compose screen — select recipient household, write text message, send
+- [x] **Server:** `POST /mail/send` — validate, write to Firestore, trigger FCM push
+- [x] **iOS:** FCM integration — register for push notifications, store token
+- [x] **Server:** `POST /fcm/register` — store device FCM token
+- [x] **iOS:** Mailbox screen — list received messages, sorted by date
+- [x] **iOS:** Message detail screen — show full message content
+- [x] **Server:** `GET /households/:id/mailbox` — paginated mailbox query
+
+> **Status:** Complete. All endpoints implemented and iOS views built. App uses tab-based navigation (Mailbox, Contacts, Settings). Build compiles clean.
 
 ### Definition of Done
 User A sends a text message to User B's household. User B receives a push notification, opens the app, sees the message in their mailbox, and can read it. No NFC required yet.

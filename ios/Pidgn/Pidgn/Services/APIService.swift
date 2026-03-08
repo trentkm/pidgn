@@ -107,6 +107,118 @@ class APIService {
         )
         return try JSONDecoder().decode(JoinHouseholdResponse.self, from: data)
     }
+    // MARK: - Contact Endpoints
+
+    struct ConnectResponse: Decodable {
+        let status: String
+        let targetHouseholdId: String
+        let targetHouseholdName: String
+    }
+
+    func connectToHousehold(targetHouseholdId: String) async throws -> ConnectResponse {
+        let data = try await authenticatedRequest(
+            path: "/households/connect",
+            method: "POST",
+            body: ["targetHouseholdId": targetHouseholdId]
+        )
+        return try JSONDecoder().decode(ConnectResponse.self, from: data)
+    }
+
+    struct AcceptConnectionResponse: Decodable {
+        let status: String
+        let fromHouseholdId: String
+    }
+
+    func acceptConnection(fromHouseholdId: String) async throws -> AcceptConnectionResponse {
+        let data = try await authenticatedRequest(
+            path: "/households/connect/accept",
+            method: "POST",
+            body: ["fromHouseholdId": fromHouseholdId]
+        )
+        return try JSONDecoder().decode(AcceptConnectionResponse.self, from: data)
+    }
+
+    struct ContactsResponse: Decodable {
+        let contacts: [ContactEntry]
+    }
+
+    struct ContactEntry: Decodable, Identifiable {
+        let householdId: String
+        let householdName: String
+        let status: String
+        let direction: String?
+        let createdAt: String?
+        let connectedAt: String?
+
+        var id: String { householdId }
+    }
+
+    func fetchContacts(householdId: String) async throws -> ContactsResponse {
+        let data = try await authenticatedRequest(
+            path: "/households/contacts/\(householdId)",
+            method: "GET"
+        )
+        return try JSONDecoder().decode(ContactsResponse.self, from: data)
+    }
+
+    // MARK: - Mail Endpoints
+
+    struct SendMailResponse: Decodable {
+        let messageId: String
+    }
+
+    func sendMail(targetHouseholdId: String, content: String) async throws -> SendMailResponse {
+        let data = try await authenticatedRequest(
+            path: "/mail/send",
+            method: "POST",
+            body: ["targetHouseholdId": targetHouseholdId, "content": content]
+        )
+        return try JSONDecoder().decode(SendMailResponse.self, from: data)
+    }
+
+    struct MailboxResponse: Decodable {
+        let messages: [MailMessage]
+        let hasMore: Bool
+    }
+
+    struct MailMessage: Decodable, Identifiable {
+        let id: String
+        let fromUserId: String
+        let fromDisplayName: String
+        let fromHouseholdId: String
+        let type: String
+        let content: String
+        let mediaUrl: String?
+        let sentAt: String?
+        let isOpened: Bool
+        let openedAt: String?
+        let openedByUserId: String?
+    }
+
+    func fetchMailbox(householdId: String, limit: Int = 20, startAfter: String? = nil, unreadOnly: Bool = false) async throws -> MailboxResponse {
+        var path = "/mail/mailbox/\(householdId)?limit=\(limit)"
+        if let startAfter {
+            path += "&startAfter=\(startAfter)"
+        }
+        if unreadOnly {
+            path += "&unreadOnly=true"
+        }
+        let data = try await authenticatedRequest(
+            path: path,
+            method: "GET"
+        )
+        return try JSONDecoder().decode(MailboxResponse.self, from: data)
+    }
+
+    // MARK: - FCM Endpoints
+
+    func registerFCMToken(token: String, deviceId: String) async throws {
+        _ = try await authenticatedRequest(
+            path: "/fcm/register",
+            method: "POST",
+            body: ["token": token, "deviceId": deviceId]
+        )
+    }
 }
 
 // MARK: - API Errors
