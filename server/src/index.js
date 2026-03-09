@@ -70,6 +70,9 @@ app.get('/privacy', (req, res) => {
 app.get('/open', (req, res) => {
   res.sendFile(path.join(webRoot, 'open.html'));
 });
+app.get('/invite/:code', (req, res) => {
+  res.sendFile(path.join(webRoot, 'invite.html'));
+});
 app.get('/', (req, res) => {
   res.sendFile(path.join(webRoot, 'index.html'));
 });

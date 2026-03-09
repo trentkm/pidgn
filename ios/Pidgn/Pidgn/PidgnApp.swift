@@ -15,6 +15,7 @@ import FirebaseCore
 struct PidgnApp: App {
     @State private var authService: AuthService
     @State private var shouldOpenUnread = false
+    @State private var pendingInviteCode: String?
 
     init() {
         FirebaseApp.configure()
@@ -24,22 +25,27 @@ struct PidgnApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(shouldOpenUnread: $shouldOpenUnread)
-                .environment(authService)
-                .onOpenURL { url in
-                    handleUniversalLink(url)
-                }
+            ContentView(
+                shouldOpenUnread: $shouldOpenUnread,
+                pendingInviteCode: $pendingInviteCode
+            )
+            .environment(authService)
+            .onOpenURL { url in
+                handleUniversalLink(url)
+            }
         }
     }
 
     private func handleUniversalLink(_ url: URL) {
-        // Universal Link: https://pidgn.app/open
-        guard url.host == "pidgn.app" || url.host == "www.pidgn.app",
-              url.path == "/open" else {
+        guard url.host == "pidgn.app" || url.host == "www.pidgn.app" else {
             return
         }
 
-        // Trigger mailbox to open all unread messages
-        shouldOpenUnread = true
+        if url.path == "/open" {
+            shouldOpenUnread = true
+        } else if url.pathComponents.count >= 3,
+                  url.pathComponents[1] == "invite" {
+            pendingInviteCode = url.pathComponents[2]
+        }
     }
 }

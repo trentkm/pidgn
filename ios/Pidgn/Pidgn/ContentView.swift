@@ -13,6 +13,7 @@ struct ContentView: View {
     @Environment(AuthService.self) var authService
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Binding var shouldOpenUnread: Bool
+    @Binding var pendingInviteCode: String?
 
     var body: some View {
         Group {
@@ -36,6 +37,11 @@ struct ContentView: View {
                 }
             } else if !authService.isAuthenticated {
                 SignInView()
+            } else if let code = pendingInviteCode {
+                InviteJoinView(
+                    inviteCode: code,
+                    onDismiss: { pendingInviteCode = nil }
+                )
             } else if authService.userProfile?.householdId == nil {
                 HouseholdSetupView()
             } else {
@@ -46,6 +52,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(shouldOpenUnread: .constant(false))
+    ContentView(shouldOpenUnread: .constant(false), pendingInviteCode: .constant(nil))
         .environment(AuthService())
 }

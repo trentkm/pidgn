@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join a Nest on Pidgn</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #121010;
+      color: #FDF5ED;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 400px;
+      text-align: center;
+    }
+    .icon {
+      font-size: 3.5rem;
+      margin-bottom: 1.5rem;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+    p {
+      font-size: 1rem;
+      line-height: 1.6;
+      color: rgba(253, 245, 237, 0.5);
+      margin-bottom: 1.5rem;
+    }
+    .code {
+      display: inline-block;
+      font-family: monospace;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: #C27A5A;
+      background: rgba(194, 122, 90, 0.1);
+      border: 1px solid rgba(194, 122, 90, 0.2);
+      border-radius: 12px;
+      padding: 0.75rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .cta {
+      display: inline-block;
+      background: #C27A5A;
+      color: #121010;
+      padding: 0.875rem 2.5rem;
+      border-radius: 14px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .cta:hover { opacity: 0.9; }
+    .note {
+      font-size: 0.85rem;
+      color: rgba(253, 245, 237, 0.25);
+      margin-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🕊️</div>
+    <h1>You've been invited to a Nest</h1>
+    <p>Someone wants you to join their household on Pidgn — a place for slow, thoughtful letters between family.</p>
+    <div class="code" id="inviteCode"></div>
+    <br><br>
+    <a class="cta" href="#">Download Pidgn</a>
+    <p class="note">Open this link on your iPhone with Pidgn installed to join automatically.</p>
+  </div>
+  <script>
+    const code = window.location.pathname.split('/invite/')[1];
+    if (code) {
+      document.getElementById('inviteCode').textContent = code.toUpperCase();
+    }
+  </script>
+</body>
+</html>

@@ -66,7 +66,9 @@ enum NestCrest: String, CaseIterable {
 struct SettingsView: View {
     @Environment(AuthService.self) var authService
     @State private var inviteCode: String?
+    @State private var inviteURL: String?
     @State private var isGeneratingInvite = false
+    @State private var showShareSheet = false
     @State private var errorMessage: String?
     @State private var copiedHouseholdId = false
     @State private var isSettingUpMagnet = false
@@ -542,7 +544,7 @@ struct SettingsView: View {
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundStyle(PidgnTheme.accent)
 
-                        Text("Generate a code for a new flock member")
+                        Text("Send a link to invite someone to your nest")
                             .font(.system(size: 11, design: .rounded))
                             .foregroundStyle(Color.white.opacity(0.2))
                     }
@@ -567,36 +569,13 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             .disabled(isGeneratingInvite)
-
-            // Show invite code if generated
-            if let code = inviteCode {
-                HStack(spacing: 8) {
-                    Text(code)
-                        .font(.system(size: 22, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(cardBg)
-                        .tracking(3)
-
-                    Spacer()
-
-                    Button {
-                        UIPasteboard.general.string = code
-                    } label: {
-                        Image(systemName: "doc.on.doc")
-                            .font(.system(size: 13))
-                            .foregroundStyle(PidgnTheme.accent)
-                    }
+            .sheet(isPresented: $showShareSheet) {
+                if let url = inviteURL {
+                    ShareSheet(items: [
+                        "Join my Nest on Pidgn! \(url)" as Any
+                    ])
+                    .presentationDetents([.medium])
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.white.opacity(0.03))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Color.white.opacity(0.04), lineWidth: 1)
-                        )
-                )
-                .padding(.top, 4)
             }
         }
     }
@@ -773,12 +752,26 @@ struct SettingsView: View {
         do {
             let response = try await APIService.shared.generateInvite(householdId: householdId)
             inviteCode = response.inviteCode
+            inviteURL = "https://pidgn.app/invite/\(response.inviteCode)"
+            showShareSheet = true
         } catch {
             errorMessage = error.localizedDescription
         }
 
         isGeneratingInvite = false
     }
+}
+
+// MARK: - Share Sheet
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {
