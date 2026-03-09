@@ -6,6 +6,9 @@
 
 import SwiftUI
 import UIKit
+import PhotosUI
+import FirebaseAuth
+import FirebaseStorage
 
 // MARK: - Nest Customization Data
 
@@ -82,6 +85,9 @@ struct SettingsView: View {
     @State private var editingBio = false
     @State private var profileLoaded = false
     @State private var stats: APIService.UserStats?
+    @State private var avatarUrl: String?
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var isUploadingAvatar = false
 
     private var plumage: NestColor {
         NestColor(rawValue: plumageRaw) ?? .terracotta
@@ -151,25 +157,44 @@ struct SettingsView: View {
                     )
 
                 VStack(spacing: 0) {
-                    // Avatar
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [plumage.color, plumage.color.opacity(0.8)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+                    // Avatar — tap to change photo
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                        ZStack(alignment: .bottomTrailing) {
+                            AvatarView(
+                                avatarUrl: avatarUrl,
+                                plumage: plumageRaw,
+                                crest: crestRaw,
+                                displayName: authService.userProfile?.displayName ?? "",
+                                size: 80,
+                                cornerRadius: 24
                             )
-                            .frame(width: 80, height: 80)
                             .shadow(color: plumage.color.opacity(0.4), radius: 12, y: 6)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                                     .stroke(Color.white.opacity(0.1), lineWidth: 3)
                             )
 
-                        Text(crest.emoji)
-                            .font(.system(size: 36))
+                            if isUploadingAvatar {
+                                ProgressView()
+                                    .tint(.white)
+                                    .frame(width: 26, height: 26)
+                                    .background(Circle().fill(Color.black.opacity(0.6)))
+                                    .offset(x: 4, y: 4)
+                            } else {
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 26, height: 26)
+                                    .background(Circle().fill(PidgnTheme.accent))
+                                    .overlay(Circle().stroke(Color(red: 0.07, green: 0.06, blue: 0.05), lineWidth: 2))
+                                    .offset(x: 4, y: 4)
+                            }
+                        }
+                    }
+                    .disabled(isUploadingAvatar)
+                    .onChange(of: selectedPhoto) { _, newItem in
+                        guard let newItem else { return }
+                        Task { await uploadAvatar(item: newItem) }
                     }
                     .padding(.top, 28)
 
@@ -710,6 +735,7 @@ struct SettingsView: View {
         if let p = profile.plumage { plumageRaw = p }
         if let c = profile.crest { crestRaw = c }
         if let b = profile.bio { bio = b }
+        avatarUrl = profile.avatarUrl
         profileLoaded = true
     }
 
@@ -718,6 +744,46 @@ struct SettingsView: View {
         let trimmed = bio.trimmingCharacters(in: .whitespacesAndNewlines)
         bio = trimmed
         Task { try? await APIService.shared.updateProfile(bio: trimmed) }
+    }
+
+    // MARK: - Avatar Upload
+
+    private func uploadAvatar(item: PhotosPickerItem) async {
+        guard let uid = authService.user?.uid else { return }
+        isUploadingAvatar = true
+
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
+                isUploadingAvatar = false
+                return
+            }
+
+            // Compress to JPEG
+            guard let uiImage = UIImage(data: data),
+                  let jpegData = uiImage.jpegData(compressionQuality: 0.7) else {
+                isUploadingAvatar = false
+                return
+            }
+
+            // Upload to Firebase Storage
+            let storageRef = Storage.storage().reference().child("avatars/\(uid).jpg")
+            let metadata = StorageMetadata()
+            metadata.contentType = "image/jpeg"
+
+            _ = try await storageRef.putDataAsync(jpegData, metadata: metadata)
+            let downloadURL = try await storageRef.downloadURL()
+            let urlString = downloadURL.absoluteString
+
+            // Save URL to profile
+            try await APIService.shared.updateProfile(avatarUrl: urlString)
+            avatarUrl = urlString
+            await authService.refreshProfile()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isUploadingAvatar = false
+        selectedPhoto = nil
     }
 
     // MARK: - Actions

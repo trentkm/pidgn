@@ -53,7 +53,10 @@ struct MailboxView: View {
                 result.append(SenderInfo(
                     name: msg.fromDisplayName,
                     count: count,
-                    color: plumageColor
+                    color: plumageColor,
+                    avatarUrl: msg.fromAvatarUrl,
+                    crest: msg.fromCrest,
+                    plumage: msg.fromPlumage
                 ))
             }
         }
@@ -331,14 +334,14 @@ struct MailboxView: View {
                         VStack(spacing: 4) {
                             ZStack(alignment: .topTrailing) {
                                 // Avatar
-                                Text(String(sender.name.prefix(1)).uppercased())
-                                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 44, height: 44)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 13, style: .continuous)
-                                            .fill(sender.color)
-                                    )
+                                AvatarView(
+                                    avatarUrl: sender.avatarUrl,
+                                    plumage: sender.plumage,
+                                    crest: sender.crest,
+                                    displayName: sender.name,
+                                    size: 44,
+                                    cornerRadius: 13
+                                )
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 13, style: .continuous)
                                             .stroke(isActive ? .white.opacity(0.25) : .clear, lineWidth: 2)
@@ -415,6 +418,9 @@ struct MailboxView: View {
         let name: String
         let count: Int
         let color: Color
+        let avatarUrl: String?
+        let crest: String?
+        let plumage: String?
         var id: String { name }
     }
 
@@ -559,22 +565,15 @@ private struct ScatteredLetterCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Sender avatar with crest
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(NestColor(rawValue: message.fromPlumage ?? "")?.color
-                          ?? senderColor(for: message.fromDisplayName))
-                    .frame(width: 36, height: 36)
-
-                if let crestEmoji = NestCrest(rawValue: message.fromCrest ?? "")?.emoji {
-                    Text(crestEmoji)
-                        .font(.system(size: 18))
-                } else {
-                    Text(String(message.fromDisplayName.prefix(1)).uppercased())
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                }
-            }
+            // Sender avatar
+            AvatarView(
+                avatarUrl: message.fromAvatarUrl,
+                plumage: message.fromPlumage,
+                crest: message.fromCrest,
+                displayName: message.fromDisplayName,
+                size: 36,
+                cornerRadius: 10
+            )
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {

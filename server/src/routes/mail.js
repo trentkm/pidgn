@@ -83,6 +83,7 @@ router.post('/send', async (req, res) => {
       fromHouseholdId,
       fromPlumage: userData.plumage || 'terracotta',
       fromCrest: userData.crest || 'dove',
+      fromAvatarUrl: userData.avatarUrl || null,
       type,
       content: content ? content.trim() : '',
       mediaUrl: mediaUrl || null,

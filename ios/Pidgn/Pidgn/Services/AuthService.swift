@@ -29,6 +29,7 @@ class AuthService {
         let plumage: String?
         let crest: String?
         let bio: String?
+        let avatarUrl: String?
     }
 
     init() {
@@ -141,7 +142,8 @@ class AuthService {
                 householdId: data["householdId"] as? String,
                 plumage: data["plumage"] as? String,
                 crest: data["crest"] as? String,
-                bio: data["bio"] as? String
+                bio: data["bio"] as? String,
+                avatarUrl: data["avatarUrl"] as? String
             )
         } catch {
             print("Failed to fetch user profile: \(error.localizedDescription)")

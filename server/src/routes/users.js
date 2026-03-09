@@ -30,6 +30,17 @@ router.post('/profile', async (req, res) => {
       updates.bio = bio.slice(0, 80);
     }
 
+    if (req.body.avatarUrl !== undefined) {
+      const { avatarUrl } = req.body;
+      if (avatarUrl === null || avatarUrl === '') {
+        updates.avatarUrl = null;
+      } else if (typeof avatarUrl === 'string' && avatarUrl.startsWith('https://')) {
+        updates.avatarUrl = avatarUrl;
+      } else {
+        return res.status(400).json({ error: 'avatarUrl must be an https URL or null' });
+      }
+    }
+
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: 'No valid fields to update' });
     }

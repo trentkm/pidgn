@@ -492,34 +492,46 @@ private struct FlockCard: View {
 
     private var avatar: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [plumageColor, plumageColor.opacity(0.75)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            if memberCount > 1 {
+                // Nest: show member count
+                RoundedRectangle(cornerRadius: 17, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [plumageColor, plumageColor.opacity(0.75)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
+                    .frame(width: 56, height: 56)
+                    .shadow(color: plumageColor.opacity(0.25), radius: 8, y: 4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 17, style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 2)
+                    )
+                    .overlay {
+                        VStack(spacing: 0) {
+                            Image(systemName: "person.2.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(.white.opacity(0.8))
+                            Text("\(memberCount)")
+                                .font(.system(size: 8, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.7))
+                        }
+                    }
+            } else {
+                AvatarView(
+                    avatarUrl: primaryMember?.avatarUrl,
+                    plumage: primaryMember?.plumage,
+                    crest: primaryMember?.crest,
+                    displayName: contact.householdName,
+                    size: 56,
+                    cornerRadius: 17
                 )
-                .frame(width: 56, height: 56)
                 .shadow(color: plumageColor.opacity(0.25), radius: 8, y: 4)
                 .overlay(
                     RoundedRectangle(cornerRadius: 17, style: .continuous)
                         .stroke(Color.white.opacity(0.08), lineWidth: 2)
                 )
-
-            if memberCount > 1 {
-                // Nest: show member count icon
-                VStack(spacing: 0) {
-                    Image(systemName: "person.2.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(.white.opacity(0.8))
-                    Text("\(memberCount)")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.7))
-                }
-            } else {
-                Text(crestEmoji)
-                    .font(.system(size: 25))
             }
         }
     }
@@ -675,20 +687,14 @@ private struct FlockCard: View {
             HStack(spacing: 8) {
                 ForEach(members, id: \.displayName) { member in
                     HStack(spacing: 6) {
-                        let memberPlumage = NestColor(rawValue: member.plumage ?? "")?.color ?? plumageColor
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(memberPlumage.opacity(0.6))
-                                .frame(width: 22, height: 22)
-                            if let emoji = NestCrest(rawValue: member.crest ?? "")?.emoji {
-                                Text(emoji)
-                                    .font(.system(size: 10))
-                            } else {
-                                Text(String(member.displayName.prefix(1)).uppercased())
-                                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.white)
-                            }
-                        }
+                        AvatarView(
+                            avatarUrl: member.avatarUrl,
+                            plumage: member.plumage,
+                            crest: member.crest,
+                            displayName: member.displayName,
+                            size: 22,
+                            cornerRadius: 7
+                        )
                         Text(member.displayName)
                             .font(.system(size: 12, design: .rounded))
                             .foregroundStyle(Color.white.opacity(0.4))

@@ -159,6 +159,7 @@ class APIService {
         let plumage: String?
         let crest: String?
         let bio: String?
+        let avatarUrl: String?
     }
 
     struct ContactEntry: Decodable, Identifiable {
@@ -226,6 +227,7 @@ class APIService {
         let fromHouseholdId: String
         let fromPlumage: String?
         let fromCrest: String?
+        let fromAvatarUrl: String?
         let type: String
         let content: String
         let mediaUrl: String?
@@ -289,11 +291,12 @@ class APIService {
         return try JSONDecoder().decode(UserStats.self, from: data)
     }
 
-    func updateProfile(plumage: String? = nil, crest: String? = nil, bio: String? = nil) async throws {
+    func updateProfile(plumage: String? = nil, crest: String? = nil, bio: String? = nil, avatarUrl: String? = nil) async throws {
         var body: [String: Any] = [:]
         if let plumage { body["plumage"] = plumage }
         if let crest { body["crest"] = crest }
         if let bio { body["bio"] = bio }
+        if let avatarUrl { body["avatarUrl"] = avatarUrl }
         guard !body.isEmpty else { return }
         _ = try await authenticatedRequest(
             path: "/users/profile",

@@ -313,6 +313,7 @@ router.get('/contacts/:householdId', async (req, res) => {
             plumage: d.data().plumage || 'terracotta',
             crest: d.data().crest || 'dove',
             bio: d.data().bio || null,
+            avatarUrl: d.data().avatarUrl || null,
           }));
 
         // Count letters using regular gets (avoids needing aggregate indexes)
