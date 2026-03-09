@@ -263,13 +263,83 @@ router.get('/contacts/:householdId', async (req, res) => {
       .collection('connected')
       .get();
 
-    const contacts = snapshot.docs.map(doc => ({
-      householdId: doc.id,
-      householdName: doc.data().targetHouseholdName || 'Unknown',
-      status: doc.data().status,
-      direction: doc.data().direction || null,
-      createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || null,
-      connectedAt: doc.data().connectedAt?.toDate?.()?.toISOString() || null,
+    // Build basic contacts, then enrich accepted ones in parallel
+    const contacts = await Promise.all(snapshot.docs.map(async (doc) => {
+      const data = doc.data();
+      const contact = {
+        householdId: doc.id,
+        householdName: data.targetHouseholdName || 'Unknown',
+        status: data.status,
+        direction: data.direction || null,
+        createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
+        connectedAt: data.connectedAt?.toDate?.()?.toISOString() || null,
+        // Enriched fields (populated for accepted contacts)
+        members: [],
+        lettersSent: 0,
+        lettersReceived: 0,
+        lastLetterAt: null,
+      };
+
+      if (data.status !== 'accepted') return contact;
+
+      try {
+        // Fetch household members' profiles and letter stats in parallel
+        const targetHouseholdDoc = await db.collection('households').doc(doc.id).get();
+        const memberIds = targetHouseholdDoc.exists ? (targetHouseholdDoc.data().memberIds || []) : [];
+
+        const [memberDocs, sentSnap, receivedSnap] = await Promise.all([
+          // Fetch member profiles
+          Promise.all(memberIds.map(id => db.collection('users').doc(id).get())),
+          // Letters we sent TO them (in their mailbox, from our household)
+          db.collection('households').doc(doc.id)
+            .collection('mailbox')
+            .where('fromHouseholdId', '==', householdId)
+            .orderBy('sentAt', 'desc')
+            .limit(1)
+            .get(),
+          // Letters they sent TO us (in our mailbox, from their household)
+          db.collection('households').doc(householdId)
+            .collection('mailbox')
+            .where('fromHouseholdId', '==', doc.id)
+            .orderBy('sentAt', 'desc')
+            .limit(1)
+            .get(),
+        ]);
+
+        contact.members = memberDocs
+          .filter(d => d.exists)
+          .map(d => ({
+            displayName: d.data().displayName || 'Unknown',
+            plumage: d.data().plumage || 'terracotta',
+            crest: d.data().crest || 'dove',
+            bio: d.data().bio || null,
+          }));
+
+        // Count letters (use count queries for efficiency)
+        const [sentCount, receivedCount] = await Promise.all([
+          db.collection('households').doc(doc.id)
+            .collection('mailbox')
+            .where('fromHouseholdId', '==', householdId)
+            .count().get(),
+          db.collection('households').doc(householdId)
+            .collection('mailbox')
+            .where('fromHouseholdId', '==', doc.id)
+            .count().get(),
+        ]);
+
+        contact.lettersSent = sentCount.data().count;
+        contact.lettersReceived = receivedCount.data().count;
+
+        // Most recent letter (either direction)
+        const sentDate = sentSnap.docs[0]?.data()?.sentAt?.toDate?.();
+        const receivedDate = receivedSnap.docs[0]?.data()?.sentAt?.toDate?.();
+        const lastDate = [sentDate, receivedDate].filter(Boolean).sort((a, b) => b - a)[0];
+        contact.lastLetterAt = lastDate?.toISOString() || null;
+      } catch (enrichErr) {
+        console.error('Contact enrichment error (non-fatal):', enrichErr.message);
+      }
+
+      return contact;
     }));
 
     return res.status(200).json({ contacts });

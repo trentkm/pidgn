@@ -154,6 +154,13 @@ class APIService {
         let contacts: [ContactEntry]
     }
 
+    struct ContactMember: Decodable {
+        let displayName: String
+        let plumage: String?
+        let crest: String?
+        let bio: String?
+    }
+
     struct ContactEntry: Decodable, Identifiable {
         let householdId: String
         let householdName: String
@@ -161,6 +168,10 @@ class APIService {
         let direction: String?
         let createdAt: String?
         let connectedAt: String?
+        let members: [ContactMember]?
+        let lettersSent: Int?
+        let lettersReceived: Int?
+        let lastLetterAt: String?
 
         var id: String { householdId }
     }
