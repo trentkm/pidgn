@@ -73,6 +73,9 @@ app.get('/open', (req, res) => {
 app.get('/invite/:code', (req, res) => {
   res.sendFile(path.join(webRoot, 'invite.html'));
 });
+app.get('/flock/:householdId', (req, res) => {
+  res.sendFile(path.join(webRoot, 'flock.html'));
+});
 app.get('/', (req, res) => {
   res.sendFile(path.join(webRoot, 'index.html'));
 });

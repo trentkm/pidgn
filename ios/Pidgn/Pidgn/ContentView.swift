@@ -14,6 +14,7 @@ struct ContentView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Binding var shouldOpenUnread: Bool
     @Binding var pendingInviteCode: String?
+    @Binding var pendingFlockId: String?
 
     var body: some View {
         Group {
@@ -44,6 +45,11 @@ struct ContentView: View {
                 )
             } else if authService.userProfile?.householdId == nil {
                 HouseholdSetupView()
+            } else if let flockId = pendingFlockId {
+                FlockConnectView(
+                    targetHouseholdId: flockId,
+                    onDismiss: { pendingFlockId = nil }
+                )
             } else {
                 MainTabView(shouldOpenUnread: $shouldOpenUnread)
             }
@@ -52,6 +58,10 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(shouldOpenUnread: .constant(false), pendingInviteCode: .constant(nil))
-        .environment(AuthService())
+    ContentView(
+        shouldOpenUnread: .constant(false),
+        pendingInviteCode: .constant(nil),
+        pendingFlockId: .constant(nil)
+    )
+    .environment(AuthService())
 }

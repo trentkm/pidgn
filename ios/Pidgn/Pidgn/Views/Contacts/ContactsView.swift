@@ -14,6 +14,7 @@ struct ContactsView: View {
     @State private var errorMessage: String?
     @State private var showAddConnection = false
     @State private var expandedCard: String?
+    @State private var showFlockShareSheet = false
 
     private let bgColor = Color(red: 0.07, green: 0.06, blue: 0.05)
     private let cardBg = Color(red: 0.99, green: 0.96, blue: 0.93)
@@ -301,6 +302,11 @@ struct ContactsView: View {
         .padding(.horizontal, 24)
     }
 
+    private var flockURL: String? {
+        guard let id = householdId else { return nil }
+        return "https://pidgn.app/flock/\(id)"
+    }
+
     private var inviteCTA: some View {
         VStack(spacing: 8) {
             // Divider ornament
@@ -313,12 +319,12 @@ struct ContactsView: View {
             }
 
             Button {
-                showAddConnection = true
+                showFlockShareSheet = true
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "plus")
+                    Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 13, weight: .bold))
-                    Text("Invite to the flock")
+                    Text("Share your flock link")
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                 }
                 .foregroundStyle(PidgnTheme.accent)
@@ -333,8 +339,16 @@ struct ContactsView: View {
                         )
                 )
             }
+            .sheet(isPresented: $showFlockShareSheet) {
+                if let url = flockURL {
+                    ShareSheet(items: [
+                        "Join my flock on Pidgn! \(url)" as Any
+                    ])
+                    .presentationDetents([.medium])
+                }
+            }
 
-            Text("Share a code with someone you'd like to write to")
+            Text("Send a link to connect with another household")
                 .font(.system(size: 12, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.12))
         }

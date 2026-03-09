@@ -16,6 +16,7 @@ struct PidgnApp: App {
     @State private var authService: AuthService
     @State private var shouldOpenUnread = false
     @State private var pendingInviteCode: String?
+    @State private var pendingFlockId: String?
 
     init() {
         FirebaseApp.configure()
@@ -27,7 +28,8 @@ struct PidgnApp: App {
         WindowGroup {
             ContentView(
                 shouldOpenUnread: $shouldOpenUnread,
-                pendingInviteCode: $pendingInviteCode
+                pendingInviteCode: $pendingInviteCode,
+                pendingFlockId: $pendingFlockId
             )
             .environment(authService)
             .onOpenURL { url in
@@ -46,6 +48,9 @@ struct PidgnApp: App {
         } else if url.pathComponents.count >= 3,
                   url.pathComponents[1] == "invite" {
             pendingInviteCode = url.pathComponents[2]
+        } else if url.pathComponents.count >= 3,
+                  url.pathComponents[1] == "flock" {
+            pendingFlockId = url.pathComponents[2]
         }
     }
 }
