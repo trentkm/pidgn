@@ -118,8 +118,13 @@ struct MessageRevealView: View {
                                 }
 
                                 VStack(spacing: 16) {
-                                    // From header
+                                    // From header with crest
                                     VStack(spacing: 4) {
+                                        if let crestEmoji = NestCrest(rawValue: message.fromCrest ?? "")?.emoji {
+                                            Text(crestEmoji)
+                                                .font(.system(size: 28))
+                                        }
+
                                         Text("From")
                                             .font(.system(size: 10, weight: .medium, design: .rounded))
                                             .foregroundStyle(mood.textColor.opacity(0.35))
@@ -282,7 +287,8 @@ struct Triangle: Shape {
     MessageRevealView(
         message: APIService.MailMessage(
             id: "1", fromUserId: "user1", fromDisplayName: "Mom",
-            fromHouseholdId: "hh1", type: "text",
+            fromHouseholdId: "hh1", fromPlumage: "sage", fromCrest: "dove",
+            type: "text",
             content: "Hope you're having a great day! Don't forget to call grandma.",
             mediaUrl: nil, stationery: "rosewater",
             sentAt: "2026-03-07T12:00:00.000Z",

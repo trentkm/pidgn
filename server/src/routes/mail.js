@@ -81,6 +81,8 @@ router.post('/send', async (req, res) => {
       fromUserId: uid,
       fromDisplayName: userData.displayName || 'Unknown',
       fromHouseholdId,
+      fromPlumage: userData.plumage || 'terracotta',
+      fromCrest: userData.crest || 'dove',
       type,
       content: content ? content.trim() : '',
       mediaUrl: mediaUrl || null,

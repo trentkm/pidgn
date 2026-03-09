@@ -22,6 +22,7 @@ const householdsRouter = require('./routes/households');
 const contactsRouter = require('./routes/contacts');
 const mailRouter = require('./routes/mail');
 const fcmRouter = require('./routes/fcm');
+const usersRouter = require('./routes/users');
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use('/households', requireAuth, householdsRouter);
 app.use('/households', requireAuth, contactsRouter);
 app.use('/mail', requireAuth, writeLimiter, mailRouter);
 app.use('/fcm', requireAuth, fcmRouter);
+app.use('/users', requireAuth, usersRouter);
 
 // Serve static web files (AASA, privacy policy, fallback pages)
 const webRoot = path.join(__dirname, '..', '..', 'web');

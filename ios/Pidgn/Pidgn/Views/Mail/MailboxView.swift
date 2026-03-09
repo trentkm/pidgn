@@ -16,6 +16,7 @@ struct MailboxView: View {
     @State private var hasMore = false
     @State private var revealedMessage: APIService.MailMessage?
     @State private var showReveal = false
+    @State private var senderFilter: String?
 
     @State var shouldOpenUnread: Bool = false
 
@@ -28,7 +29,35 @@ struct MailboxView: View {
     }
 
     private var openedMessages: [APIService.MailMessage] {
+        let opened = messages.filter { $0.isOpened }
+        if let filter = senderFilter {
+            return opened.filter { $0.fromDisplayName == filter }
+        }
+        return opened
+    }
+
+    private var allOpenedMessages: [APIService.MailMessage] {
         messages.filter { $0.isOpened }
+    }
+
+    /// Unique senders from opened mail, ordered by most recent letter
+    private var uniqueSenders: [SenderInfo] {
+        var seen = Set<String>()
+        var result: [SenderInfo] = []
+        for msg in allOpenedMessages {
+            if !seen.contains(msg.fromDisplayName) {
+                seen.insert(msg.fromDisplayName)
+                let count = allOpenedMessages.filter { $0.fromDisplayName == msg.fromDisplayName }.count
+                let plumageColor = NestColor(rawValue: msg.fromPlumage ?? "")?.color
+                    ?? senderColor(for: msg.fromDisplayName)
+                result.append(SenderInfo(
+                    name: msg.fromDisplayName,
+                    count: count,
+                    color: plumageColor
+                ))
+            }
+        }
+        return result
     }
 
     private var greeting: String {
@@ -197,35 +226,8 @@ struct MailboxView: View {
                 }
 
                 // Opened letters
-                if !openedMessages.isEmpty {
-                    VStack(spacing: 0) {
-                        // Centered "Opened" divider with lines
-                        HStack(spacing: 12) {
-                            Rectangle()
-                                .fill(Color.white.opacity(0.08))
-                                .frame(height: 0.5)
-                            Text("Opened")
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.35))
-                                .textCase(.uppercase)
-                                .tracking(0.8)
-                            Rectangle()
-                                .fill(Color.white.opacity(0.08))
-                                .frame(height: 0.5)
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 16)
-
-                        ForEach(openedMessages) { message in
-                            NavigationLink(destination: MessageDetailView(message: message)) {
-                                OpenedLetterCard(message: message)
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 10)
-                        }
-                    }
-                    .padding(.bottom, 16)
+                if !allOpenedMessages.isEmpty {
+                    openedSection
                 }
 
                 if hasMore {
@@ -238,6 +240,196 @@ struct MailboxView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Opened Section
+
+    private var openedSection: some View {
+        VStack(spacing: 0) {
+            // "read letters" divider
+            HStack(spacing: 12) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(height: 1)
+                Text("read letters")
+                    .font(.custom("Bradley Hand", size: 16))
+                    .foregroundStyle(.white.opacity(0.2))
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(height: 1)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 10)
+
+            // Avatar filter row
+            if uniqueSenders.count > 1 {
+                avatarFilterRow
+                    .padding(.bottom, 6)
+            }
+
+            // Active filter label
+            if let filter = senderFilter {
+                HStack {
+                    Text("letters from \(filter)...")
+                        .font(.custom("Bradley Hand", size: 15))
+                        .foregroundStyle(.white.opacity(0.2))
+                    Spacer()
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 6)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            // Letter cards
+            if openedMessages.isEmpty {
+                // Empty filter state
+                VStack(spacing: 12) {
+                    Image(systemName: "pencil.line")
+                        .font(.system(size: 28))
+                        .foregroundStyle(.white.opacity(0.1))
+                    Text("No letters from \(senderFilter ?? "") yet")
+                        .font(.custom("Bradley Hand", size: 18))
+                        .foregroundStyle(.white.opacity(0.2))
+                    Text("Perhaps a quill is in order?")
+                        .font(.system(size: 12, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.12))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+            } else {
+                ForEach(Array(openedMessages.enumerated()), id: \.element.id) { index, message in
+                    NavigationLink(destination: MessageDetailView(message: message)) {
+                        ScatteredLetterCard(message: message, index: index)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 7)
+                }
+            }
+        }
+        .padding(.bottom, 16)
+    }
+
+    // MARK: - Avatar Filter Row
+
+    private var avatarFilterRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(uniqueSenders) { sender in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            if senderFilter == sender.name {
+                                senderFilter = nil
+                            } else {
+                                senderFilter = sender.name
+                            }
+                        }
+                    } label: {
+                        let isActive = senderFilter == sender.name
+                        let dimmed = senderFilter != nil && !isActive
+
+                        VStack(spacing: 4) {
+                            ZStack(alignment: .topTrailing) {
+                                // Avatar
+                                Text(String(sender.name.prefix(1)).uppercased())
+                                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 44, height: 44)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                            .fill(sender.color)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                            .stroke(isActive ? .white.opacity(0.25) : .clear, lineWidth: 2)
+                                    )
+                                    .shadow(
+                                        color: isActive ? sender.color.opacity(0.4) : .black.opacity(0.15),
+                                        radius: isActive ? 8 : 3,
+                                        y: isActive ? 4 : 2
+                                    )
+
+                                // Count badge
+                                Text("\(sender.count)")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .foregroundStyle(isActive ? Color(red: 0.1, green: 0.08, blue: 0.06) : .white.opacity(0.6))
+                                    .frame(width: 18, height: 18)
+                                    .background(
+                                        Circle()
+                                            .fill(isActive ? Color(red: 0.99, green: 0.96, blue: 0.93) : .white.opacity(0.15))
+                                    )
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color(red: 0.07, green: 0.06, blue: 0.04), lineWidth: 2)
+                                    )
+                                    .offset(x: 4, y: -4)
+                            }
+
+                            Text(sender.name)
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .foregroundStyle(isActive ? .white.opacity(0.7) : .white.opacity(0.3))
+                        }
+                        .opacity(dimmed ? 0.35 : 1)
+                        .offset(y: isActive ? -2 : 0)
+                        .animation(.easeInOut(duration: 0.25), value: isActive)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // Clear filter button
+                if senderFilter != nil {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            senderFilter = nil
+                        }
+                    } label: {
+                        VStack(spacing: 4) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                    .fill(.white.opacity(0.06))
+                                    .frame(width: 44, height: 44)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                            .stroke(.white.opacity(0.08), lineWidth: 1)
+                                    )
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.4))
+                            }
+                            Text("All")
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.25))
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity.combined(with: .move(edge: .trailing)))
+                }
+            }
+            .padding(.horizontal, 24)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private struct SenderInfo: Identifiable {
+        let name: String
+        let count: Int
+        let color: Color
+        var id: String { name }
+    }
+
+    /// Generate a consistent color for a sender name
+    private func senderColor(for name: String) -> Color {
+        let colors: [Color] = [
+            Color(red: 0.76, green: 0.48, blue: 0.35), // terracotta
+            Color(red: 0.48, green: 0.55, blue: 0.44), // sage
+            Color(red: 0.44, green: 0.50, blue: 0.66), // slate blue
+            Color(red: 0.66, green: 0.48, blue: 0.62), // mauve
+            Color(red: 0.55, green: 0.62, blue: 0.50), // moss
+            Color(red: 0.60, green: 0.45, blue: 0.42), // clay
+        ]
+        let hash = abs(name.hashValue)
+        return colors[hash % colors.count]
     }
 
     // MARK: - Data
@@ -282,11 +474,9 @@ struct MailboxView: View {
     private func openSingleMessage(_ message: APIService.MailMessage) async {
         guard let householdId else { return }
 
-        // Step 1: NFC scan — verify the user has the magnet
         do {
             try await NFCService.shared.scanTag()
         } catch {
-            // User cancelled or NFC busy — silently return so they can tap again
             let nfcError = error as? NFCReaderError
             if nfcError?.code == .readerSessionInvalidationErrorUserCanceled { return }
             if let nfcErr = error as? NFCError, nfcErr == .sessionBusy { return }
@@ -294,7 +484,6 @@ struct MailboxView: View {
             return
         }
 
-        // Step 2: Mark the letter as opened on the server
         do {
             let response = try await APIService.shared.openMail(
                 messageId: message.id,
@@ -338,6 +527,190 @@ struct MailboxView: View {
     }
 }
 
+// MARK: - Scattered Letter Card (Opened)
+
+private struct ScatteredLetterCard: View {
+    let message: APIService.MailMessage
+    let index: Int
+
+    private var mood: Stationery {
+        Stationery(rawValue: message.stationery ?? "parchment") ?? .parchment
+    }
+
+    // Subtle scatter for a natural "pile of letters" feel
+    private static let rotations: [Double] = [-1.1, 0.7, -0.4, 1.0, -0.8, 0.5, -0.3, 0.9]
+    private static let offsets: [CGFloat] = [-2, 3, -1, 2, -3, 1, -2, 3]
+
+    private var rotation: Double {
+        Self.rotations[index % Self.rotations.count]
+    }
+
+    private var xOffset: CGFloat {
+        Self.offsets[index % Self.offsets.count]
+    }
+
+    private var preview: String {
+        switch message.type {
+        case "photo": return message.content.isEmpty ? "A photograph" : message.content
+        case "voice": return "A voice note"
+        default: return message.content
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Sender avatar with crest
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(NestColor(rawValue: message.fromPlumage ?? "")?.color
+                          ?? senderColor(for: message.fromDisplayName))
+                    .frame(width: 36, height: 36)
+
+                if let crestEmoji = NestCrest(rawValue: message.fromCrest ?? "")?.emoji {
+                    Text(crestEmoji)
+                        .font(.system(size: 18))
+                } else {
+                    Text(String(message.fromDisplayName.prefix(1)).uppercased())
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(message.fromDisplayName)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.7))
+
+                    if let sentAt = message.sentAt {
+                        Text(relativeDate(sentAt))
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.2))
+                            .italic()
+                    }
+                }
+
+                Text("\"\(preview)\"")
+                    .font(.custom("Bradley Hand", size: 16))
+                    .foregroundStyle(.white.opacity(0.38))
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // Broken seal icon
+            BrokenSealIcon(color: mood.accentColor)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 15)
+        .background(
+            ZStack {
+                // Stationery tinted background
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                mood.accentColor.opacity(0.08),
+                                mood.accentColor.opacity(0.03),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                // Faint ruled lines
+                VStack(spacing: 18) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Rectangle()
+                            .fill(mood.accentColor.opacity(0.04))
+                            .frame(height: 1)
+                    }
+                }
+                .padding(.horizontal, 52)
+                .padding(.top, 10)
+            }
+        )
+        .overlay(alignment: .leading) {
+            // Left accent border
+            RoundedRectangle(cornerRadius: 2)
+                .fill(mood.accentColor.opacity(0.5))
+                .frame(width: 3)
+                .padding(.vertical, 6)
+        }
+        .overlay(alignment: .topTrailing) {
+            // Corner fold
+            CornerFold(color: mood.accentColor.opacity(0.15))
+                .frame(width: 18, height: 18)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .rotationEffect(.degrees(rotation), anchor: .center)
+        .offset(x: xOffset)
+    }
+
+    private func senderColor(for name: String) -> Color {
+        let colors: [Color] = [
+            Color(red: 0.76, green: 0.48, blue: 0.35),
+            Color(red: 0.48, green: 0.55, blue: 0.44),
+            Color(red: 0.44, green: 0.50, blue: 0.66),
+            Color(red: 0.66, green: 0.48, blue: 0.62),
+            Color(red: 0.55, green: 0.62, blue: 0.50),
+            Color(red: 0.60, green: 0.45, blue: 0.42),
+        ]
+        let hash = abs(name.hashValue)
+        return colors[hash % colors.count]
+    }
+
+    private func relativeDate(_ iso: String) -> String {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date = f.date(from: iso) ?? {
+            f.formatOptions = [.withInternetDateTime]
+            return f.date(from: iso)
+        }() else { return "" }
+        let rel = RelativeDateTimeFormatter()
+        rel.unitsStyle = .abbreviated
+        return rel.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+// MARK: - Broken Seal Icon
+
+private struct BrokenSealIcon: View {
+    let color: Color
+
+    var body: some View {
+        ZStack {
+            // Cracked seal burst
+            Image(systemName: "seal")
+                .font(.system(size: 16))
+                .foregroundStyle(color.opacity(0.3))
+
+            // Crack line
+            Path { p in
+                p.move(to: CGPoint(x: 7, y: 5))
+                p.addLine(to: CGPoint(x: 11, y: 13))
+            }
+            .stroke(color.opacity(0.2), lineWidth: 0.8)
+            .frame(width: 18, height: 18)
+        }
+    }
+}
+
+// MARK: - Corner Fold
+
+private struct CornerFold: Shape {
+    let color: Color
+
+    func path(in rect: CGRect) -> Path {
+        Path { p in
+            p.move(to: CGPoint(x: rect.maxX, y: rect.minY))
+            p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            p.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+            p.closeSubpath()
+        }
+    }
+}
+
 // MARK: - Letter Stack (Apple Wallet style)
 
 private struct LetterStack: View {
@@ -358,7 +731,6 @@ private struct LetterStack: View {
         CGFloat(messages.count) * cardHeight + CGFloat(messages.count - 1) * expandedSpacing
     }
 
-    // Subtle rotation per card for a natural "pile of mail" feel
     private static let rotations: [Double] = [0, -1.0, 0.7, -0.4, 0.9, -0.6]
 
     @State private var tappedMessageId: String?
@@ -382,15 +754,12 @@ private struct LetterStack: View {
                         anchor: .center
                     )
                     .zIndex(Double(messages.count - index))
-                    // Only the top card is tappable when collapsed
                     .allowsHitTesting(isExpanded || index == 0)
                     .onTapGesture {
                         if messages.count == 1 || isExpanded {
-                            // Tap card → NFC scan → open letter
                             tappedMessageId = message.id
                             onTapMessage(message)
                         } else {
-                            // Tap collapsed stack → fan out
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
                                 isExpanded = true
                             }
@@ -439,20 +808,17 @@ private struct WaxSeal: View {
     let isAlive: Bool
     @State private var glowing = false
 
-    // Rich wax colors — deeper than the accent for realism
     private let waxDark = Color(red: 0.58, green: 0.28, blue: 0.18)
     private let waxMid = Color(red: 0.72, green: 0.38, blue: 0.24)
     private let waxLight = Color(red: 0.82, green: 0.48, blue: 0.32)
 
     var body: some View {
         ZStack {
-            // Warm glow behind seal (breathing)
             Circle()
                 .fill(PidgnTheme.accent.opacity(glowing ? 0.18 : 0.06))
                 .frame(width: 62, height: 62)
                 .blur(radius: 10)
 
-            // Outer wax ring
             Circle()
                 .fill(
                     RadialGradient(
@@ -464,7 +830,6 @@ private struct WaxSeal: View {
                 )
                 .frame(width: 48, height: 48)
 
-            // Inner wax face — slightly off-center highlight for dimension
             Circle()
                 .fill(
                     RadialGradient(
@@ -476,7 +841,6 @@ private struct WaxSeal: View {
                 )
                 .frame(width: 38, height: 38)
 
-            // Pidgn bird — embossed into the wax
             Image(systemName: "bird.fill")
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(.white.opacity(0.88))
@@ -505,7 +869,6 @@ private struct SealedLetterCard: View {
     let stackPosition: Int
     let stackTotal: Int
 
-    // Warm ink color for text
     private let ink = Color(red: 0.22, green: 0.17, blue: 0.13)
     private let inkLight = Color(red: 0.50, green: 0.44, blue: 0.38)
 
@@ -522,7 +885,6 @@ private struct SealedLetterCard: View {
         return Self.sealedPhrases[index]
     }
 
-    // Paper gradient — warm parchment with subtle top-to-bottom warmth
     private var paperGradient: some ShapeStyle {
         let darken = Double(stackPosition) * 0.012
         return LinearGradient(
@@ -535,7 +897,6 @@ private struct SealedLetterCard: View {
         )
     }
 
-    // Edge highlight — catches light like real paper
     private var edgeGradient: some ShapeStyle {
         LinearGradient(
             colors: [
@@ -549,9 +910,7 @@ private struct SealedLetterCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // === Peek zone (always visible in stack) ===
             HStack(spacing: 14) {
-                // The wax seal — Pidgn's mark
                 WaxSeal(isAlive: isTopCard)
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -572,11 +931,9 @@ private struct SealedLetterCard: View {
             .padding(.top, 18)
             .padding(.bottom, 8)
 
-            // === Full content (hidden when behind other cards) ===
             if showFullContent {
                 Spacer(minLength: 0)
 
-                // Ornamental divider — classic stationery detail
                 HStack(spacing: 0) {
                     Spacer()
                     OrnamentalDivider()
@@ -585,7 +942,6 @@ private struct SealedLetterCard: View {
                 }
                 .padding(.bottom, 8)
 
-                // Sealed phrase + NFC hint
                 VStack(spacing: 6) {
                     Text(sealedPhrase)
                         .font(.system(size: 13, design: .serif))
@@ -613,12 +969,10 @@ private struct SealedLetterCard: View {
                 .fill(paperGradient)
         )
         .overlay(
-            // Glass edge — light catching the paper edge
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(edgeGradient, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        // Layered shadows: tight shadow for edge + diffuse warm glow
         .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
         .shadow(color: PidgnTheme.accent.opacity(0.10 + Double(stackPosition) * 0.02), radius: 16, y: 8)
     }
@@ -644,7 +998,6 @@ private struct OrnamentalDivider: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // Left flourish
             Rectangle()
                 .fill(
                     LinearGradient(
@@ -655,13 +1008,11 @@ private struct OrnamentalDivider: View {
                 )
                 .frame(height: 0.5)
 
-            // Center diamond
             Image(systemName: "diamond.fill")
                 .font(.system(size: 5))
                 .foregroundStyle(dotColor)
                 .padding(.horizontal, 8)
 
-            // Right flourish
             Rectangle()
                 .fill(
                     LinearGradient(
@@ -672,93 +1023,6 @@ private struct OrnamentalDivider: View {
                 )
                 .frame(height: 0.5)
         }
-    }
-}
-
-// MARK: - Opened Letter Card
-
-private struct OpenedLetterCard: View {
-    let message: APIService.MailMessage
-
-    private let ink = Color(red: 0.22, green: 0.17, blue: 0.13)
-
-    private var typeIcon: String {
-        switch message.type {
-        case "photo": return "photo"
-        case "voice": return "waveform"
-        default: return "envelope.open"
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 14) {
-            // Sender initial — warm tinted avatar
-            Text(String(message.fromDisplayName.prefix(1)).uppercased())
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
-                .frame(width: 36, height: 36)
-                .background(
-                    PidgnTheme.accent.opacity(0.7),
-                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                )
-
-            VStack(alignment: .leading, spacing: 3) {
-                // Name + time on same baseline
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(message.fromDisplayName)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.7))
-
-                    if let sentAt = message.sentAt {
-                        Text(relativeDate(sentAt))
-                            .font(.system(size: 12, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.25))
-                    }
-                }
-
-                Text(preview)
-                    .font(.system(size: 13, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.3))
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            // Checkmark — letter has been read
-            Image(systemName: "checkmark")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(PidgnTheme.accent.opacity(0.5))
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(PidgnTheme.sand.opacity(0.06))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(PidgnTheme.sand.opacity(0.06), lineWidth: 0.5)
-        )
-    }
-
-    private var preview: String {
-        switch message.type {
-        case "photo": return message.content.isEmpty ? "A photograph" : message.content
-        case "voice": return "A voice note"
-        default: return message.content
-        }
-    }
-
-    private func relativeDate(_ iso: String) -> String {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = f.date(from: iso) ?? {
-            f.formatOptions = [.withInternetDateTime]
-            return f.date(from: iso)
-        }() else { return "" }
-        let rel = RelativeDateTimeFormatter()
-        rel.unitsStyle = .abbreviated
-        return rel.localizedString(for: date, relativeTo: Date())
     }
 }
 

@@ -213,6 +213,8 @@ class APIService {
         let fromUserId: String
         let fromDisplayName: String
         let fromHouseholdId: String
+        let fromPlumage: String?
+        let fromCrest: String?
         let type: String
         let content: String
         let mediaUrl: String?
@@ -258,6 +260,21 @@ class APIService {
             body: ["messageId": messageId, "householdId": householdId]
         )
         return try JSONDecoder().decode(OpenMailResponse.self, from: data)
+    }
+
+    // MARK: - User Profile Endpoints
+
+    func updateProfile(plumage: String? = nil, crest: String? = nil, bio: String? = nil) async throws {
+        var body: [String: Any] = [:]
+        if let plumage { body["plumage"] = plumage }
+        if let crest { body["crest"] = crest }
+        if let bio { body["bio"] = bio }
+        guard !body.isEmpty else { return }
+        _ = try await authenticatedRequest(
+            path: "/users/profile",
+            method: "POST",
+            body: body
+        )
     }
 
     // MARK: - FCM Endpoints

@@ -21,11 +21,14 @@ class AuthService {
     nonisolated(unsafe) private var authStateListener: AuthStateDidChangeListenerHandle?
     private let db = Firestore.firestore()
 
-    struct UserProfile {    
+    struct UserProfile {
         let uid: String
         let displayName: String
         let email: String
         let householdId: String?
+        let plumage: String?
+        let crest: String?
+        let bio: String?
     }
 
     init() {
@@ -135,7 +138,10 @@ class AuthService {
                 uid: uid,
                 displayName: data["displayName"] as? String ?? "",
                 email: data["email"] as? String ?? "",
-                householdId: data["householdId"] as? String
+                householdId: data["householdId"] as? String,
+                plumage: data["plumage"] as? String,
+                crest: data["crest"] as? String,
+                bio: data["bio"] as? String
             )
         } catch {
             print("Failed to fetch user profile: \(error.localizedDescription)")
