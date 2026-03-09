@@ -61,23 +61,34 @@ router.get('/stats', async (req, res) => {
       return res.status(200).json({ lettersSent: 0, lettersReceived: 0, flockMembers: 0 });
     }
 
-    // Run all three queries in parallel
-    const [receivedSnap, householdDoc, sentSnap] = await Promise.all([
-      // Letters received = messages in our mailbox
-      db.collection('households').doc(householdId)
-        .collection('mailbox')
-        .count().get(),
-      // Flock members = household memberIds
+    // Fetch household doc and mailbox in parallel
+    const [householdDoc, receivedSnap] = await Promise.all([
       db.collection('households').doc(householdId).get(),
-      // Letters sent = messages in other mailboxes from this user
-      db.collectionGroup('mailbox')
-        .where('fromUserId', '==', uid)
-        .count().get(),
+      db.collection('households').doc(householdId)
+        .collection('mailbox').get(),
     ]);
 
-    const lettersReceived = receivedSnap.data().count;
     const flockMembers = householdDoc.exists ? (householdDoc.data().memberIds || []).length : 0;
-    const lettersSent = sentSnap.data().count;
+    const lettersReceived = receivedSnap.size;
+
+    // Count letters sent by iterating connected contacts' mailboxes
+    let lettersSent = 0;
+    const contactsSnap = await db.collection('contacts').doc(householdId)
+      .collection('connected').where('status', '==', 'accepted').get();
+
+    if (contactsSnap.size > 0) {
+      const sentCounts = await Promise.all(
+        contactsSnap.docs.map(doc =>
+          db.collection('households').doc(doc.id)
+            .collection('mailbox')
+            .where('fromHouseholdId', '==', householdId)
+            .get()
+            .then(snap => snap.size)
+            .catch(() => 0)
+        )
+      );
+      lettersSent = sentCounts.reduce((a, b) => a + b, 0);
+    }
 
     return res.status(200).json({ lettersSent, lettersReceived, flockMembers });
   } catch (err) {

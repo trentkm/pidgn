@@ -315,20 +315,20 @@ router.get('/contacts/:householdId', async (req, res) => {
             bio: d.data().bio || null,
           }));
 
-        // Count letters (use count queries for efficiency)
-        const [sentCount, receivedCount] = await Promise.all([
+        // Count letters using regular gets (avoids needing aggregate indexes)
+        const [sentSnap2, receivedSnap2] = await Promise.all([
           db.collection('households').doc(doc.id)
             .collection('mailbox')
             .where('fromHouseholdId', '==', householdId)
-            .count().get(),
+            .get(),
           db.collection('households').doc(householdId)
             .collection('mailbox')
             .where('fromHouseholdId', '==', doc.id)
-            .count().get(),
+            .get(),
         ]);
 
-        contact.lettersSent = sentCount.data().count;
-        contact.lettersReceived = receivedCount.data().count;
+        contact.lettersSent = sentSnap2.size;
+        contact.lettersReceived = receivedSnap2.size;
 
         // Most recent letter (either direction)
         const sentDate = sentSnap.docs[0]?.data()?.sentAt?.toDate?.();
