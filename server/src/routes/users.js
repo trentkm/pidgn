@@ -44,4 +44,46 @@ router.post('/profile', async (req, res) => {
   }
 });
 
+// GET /users/stats
+// Fetch letter counts and flock size for the authenticated user
+router.get('/stats', async (req, res) => {
+  try {
+    const uid = req.user.uid;
+    const db = admin.firestore();
+
+    const userDoc = await db.collection('users').doc(uid).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const householdId = userDoc.data().householdId;
+    if (!householdId) {
+      return res.status(200).json({ lettersSent: 0, lettersReceived: 0, flockMembers: 0 });
+    }
+
+    // Run all three queries in parallel
+    const [receivedSnap, householdDoc, sentSnap] = await Promise.all([
+      // Letters received = messages in our mailbox
+      db.collection('households').doc(householdId)
+        .collection('mailbox')
+        .count().get(),
+      // Flock members = household memberIds
+      db.collection('households').doc(householdId).get(),
+      // Letters sent = messages in other mailboxes from this user
+      db.collectionGroup('mailbox')
+        .where('fromUserId', '==', uid)
+        .count().get(),
+    ]);
+
+    const lettersReceived = receivedSnap.data().count;
+    const flockMembers = householdDoc.exists ? (householdDoc.data().memberIds || []).length : 0;
+    const lettersSent = sentSnap.data().count;
+
+    return res.status(200).json({ lettersSent, lettersReceived, flockMembers });
+  } catch (err) {
+    console.error('Error fetching stats:', err);
+    return res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
 module.exports = router;

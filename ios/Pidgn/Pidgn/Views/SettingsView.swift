@@ -79,6 +79,7 @@ struct SettingsView: View {
     @State private var bio: String = ""
     @State private var editingBio = false
     @State private var profileLoaded = false
+    @State private var stats: APIService.UserStats?
 
     private var plumage: NestColor {
         NestColor(rawValue: plumageRaw) ?? .terracotta
@@ -111,7 +112,10 @@ struct SettingsView: View {
         .navigationTitle("Nest")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
-        .onAppear { loadProfileIfNeeded() }
+        .onAppear {
+            loadProfileIfNeeded()
+            Task { stats = try? await APIService.shared.fetchStats() }
+        }
         .onChange(of: plumageRaw) { _, newValue in
             guard profileLoaded else { return }
             Task { try? await APIService.shared.updateProfile(plumage: newValue) }
@@ -212,11 +216,11 @@ struct SettingsView: View {
 
                     // Stats
                     HStack(spacing: 0) {
-                        statItem(value: "—", label: "Letters sent")
+                        statItem(value: stats.map { "\($0.lettersSent)" } ?? "—", label: "Letters sent")
                         statDivider
-                        statItem(value: "—", label: "Letters received")
+                        statItem(value: stats.map { "\($0.lettersReceived)" } ?? "—", label: "Letters received")
                         statDivider
-                        statItem(value: "—", label: "Flock members")
+                        statItem(value: stats.map { "\($0.flockMembers)" } ?? "—", label: "Flock members")
                     }
                     .padding(.top, 20)
                     .padding(.bottom, 24)

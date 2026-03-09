@@ -264,6 +264,20 @@ class APIService {
 
     // MARK: - User Profile Endpoints
 
+    struct UserStats: Decodable {
+        let lettersSent: Int
+        let lettersReceived: Int
+        let flockMembers: Int
+    }
+
+    func fetchStats() async throws -> UserStats {
+        let data = try await authenticatedRequest(
+            path: "/users/stats",
+            method: "GET"
+        )
+        return try JSONDecoder().decode(UserStats.self, from: data)
+    }
+
     func updateProfile(plumage: String? = nil, crest: String? = nil, bio: String? = nil) async throws {
         var body: [String: Any] = [:]
         if let plumage { body["plumage"] = plumage }
